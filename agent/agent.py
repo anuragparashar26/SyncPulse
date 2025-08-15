@@ -7,24 +7,25 @@ import psutil
 import uuid
 import logging
 import subprocess
+import os
 from typing import Dict, Any, List
 
-# Set up logger for agent output
+# ---------- Logger ----------
 def setup_logger():
     logger = logging.getLogger("AgentLogger")
     handler = logging.StreamHandler()
     formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
     handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if not logger.hasHandlers():
+        logger.addHandler(handler)
     logger.setLevel(logging.INFO)
     return logger
 
 logger = setup_logger()
 
-# Generate a unique agent ID (machine-id, Windows GUID, or persistent file fallback)
+# ---------- Unique ID ----------
 def get_unique_id():
     try:
-        import os
         if platform.system() == "Linux" and os.path.exists("/etc/machine-id"):
             with open("/etc/machine-id", "r") as f:
                 return f.read().strip()
@@ -37,7 +38,6 @@ def get_unique_id():
     except Exception:
         pass
     try:
-        import os
         AGENT_ID_FILE = "agent_id.txt"
         if os.path.exists(AGENT_ID_FILE):
             with open(AGENT_ID_FILE, "r") as f:
@@ -51,9 +51,7 @@ def get_unique_id():
         pass
     return socket.gethostname()
 
-# ----------- GPU Info Section -----------
-
-# Try to get NVIDIA GPU stats via GPUtil or nvidia-smi as a fallback
+# ---------- GPU Info ----------
 def get_nvidia_gpus():
     try:
         import GPUtil
@@ -73,7 +71,6 @@ def get_nvidia_gpus():
             })
         return gpus
     except Exception:
-        # Fallback: use nvidia-smi CLI if GPUtil is unavailable
         try:
             result = subprocess.run(
                 ["nvidia-smi", "--query-gpu=name,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,driver_version,uuid", "--format=csv,noheader,nounits"],
@@ -97,7 +94,6 @@ def get_nvidia_gpus():
         except Exception:
             return []
 
-# Try to get AMD GPU stats via pyamdgpuinfo or rocm-smi as a fallback
 def get_amd_gpus():
     try:
         import pyamdgpuinfo
@@ -114,7 +110,6 @@ def get_amd_gpus():
             })
         return gpus
     except Exception:
-        # Fallback: use rocm-smi CLI if pyamdgpuinfo is unavailable
         try:
             result = subprocess.run(
                 ["rocm-smi", "--showproductname", "--showuse", "--showmemuse", "--showtemp", "--json"],
@@ -136,7 +131,6 @@ def get_amd_gpus():
         except Exception:
             return []
 
-# Try to get Intel GPU stats via intel_gpu_top (Linux only)
 def get_intel_gpus():
     if platform.system() != "Linux":
         return []
@@ -159,7 +153,6 @@ def get_intel_gpus():
     except Exception:
         return []
 
-# Try to get GPU stats on Windows via WMIC command
 def get_windows_gpus():
     if platform.system() != "Windows":
         return []
@@ -184,7 +177,6 @@ def get_windows_gpus():
     except Exception:
         return []
 
-# Dispatch function: gather all GPU info for this platform
 def get_all_gpus():
     gpus = []
     if platform.system() == "Windows":
@@ -212,9 +204,7 @@ def get_all_gpus():
             pass
     return gpus
 
-# ----------- Hardware Names Section -----------
-
-# Get CPU name/brand string using platform-appropriate methods
+# ---------- Hardware Info ----------
 def get_cpu_name():
     try:
         if platform.system() == "Windows":
@@ -232,7 +222,6 @@ def get_cpu_name():
         pass
     return platform.processor() or "Unknown"
 
-# List disk devices and mountpoints
 def get_disk_names():
     names = []
     try:
@@ -242,14 +231,12 @@ def get_disk_names():
         pass
     return names
 
-# List network interface names
 def get_nic_names():
     try:
         return list(psutil.net_if_addrs().keys())
     except Exception:
         return []
 
-# Get RAM info: total and (optionally) module info on Windows/Linux
 def get_ram_info():
     info = {}
     try:
@@ -284,28 +271,91 @@ def get_ram_info():
         pass
     return info
 
-# ----------- Metrics Collection -----------
+def get_inode_usage(mountpoint):
+    try:
+        stat = os.statvfs(mountpoint)
+        total = stat.f_files
+        free = stat.f_ffree
+        used = total - free
+        percent = (used / total) * 100 if total else 0
+        return {"total": total, "used": used, "free": free, "percent": percent}
+    except Exception:
+        return {}
 
-def collect_metrics() -> Dict[str, Any]:
-    # Uptime since last boot
+def get_sensors_temperature():
+    temps = {}
+    try:
+        if hasattr(psutil, "sensors_temperatures"):
+            sensor_data = psutil.sensors_temperatures(fahrenheit=False)
+            for k, v in sensor_data.items():
+                temps[k] = []
+                for sensor in v:
+                    temps[k].append({
+                        "label": getattr(sensor, "label", ""),
+                        "current": getattr(sensor, "current", None),
+                        "high": getattr(sensor, "high", None),
+                        "critical": getattr(sensor, "critical", None),
+                    })
+    except Exception:
+        pass
+    return temps
+
+def get_time_drift(reference_time=None):
+    try:
+        now = time.time()
+        if reference_time is not None:
+            drift = now - reference_time
+            return {"drift_seconds": drift}
+        return {}
+    except Exception:
+        return {}
+
+def check_critical_processes(process_names):
+    found = {name: False for name in process_names}
+    try:
+        for proc in psutil.process_iter(['name']):
+            name = proc.info.get('name', '')
+            for key in found:
+                if key.lower() in name.lower():
+                    found[key] = True
+    except Exception:
+        pass
+    return found
+
+def get_zombie_process_count():
+    cnt = 0
+    try:
+        for proc in psutil.process_iter(['status']):
+            if proc.info.get('status') == psutil.STATUS_ZOMBIE:
+                cnt += 1
+    except Exception:
+        pass
+    return cnt
+
+# ---------- Metrics Collection with Preemptive Alerts ----------
+_last_metrics = {}
+
+def collect_metrics(custom_alert_flag=False) -> Dict[str, Any]:
+    global _last_metrics
+
     uptime = time.time() - psutil.boot_time()
-    # Try to get load averages (Linux/Unix), fallback to zeros
     try:
         load_avg = psutil.getloadavg()
     except (AttributeError, NotImplementedError):
         load_avg = (0, 0, 0)
-    # CPU percent usage (aggregate and per core)
+
     cpu_perc = psutil.cpu_percent(percpu=True)
     cpu_total = psutil.cpu_percent()
-    # Memory stats
     mem = psutil.virtual_memory()
     swap = psutil.swap_memory()
-    # Disk usage and I/O stats
+
     disks = []
+    inode_alerts = []
     for part in psutil.disk_partitions(all=False):
         try:
             usage = psutil.disk_usage(part.mountpoint)
             io = psutil.disk_io_counters(perdisk=True).get(part.device, {})
+            inode = get_inode_usage(part.mountpoint)
             disks.append({
                 "device": part.device,
                 "mountpoint": part.mountpoint,
@@ -318,10 +368,19 @@ def collect_metrics() -> Dict[str, Any]:
                 "write_bytes": io.get("write_bytes", 0),
                 "read_count": io.get("read_count", 0),
                 "write_count": io.get("write_count", 0),
+                "inode_total": inode.get("total"),
+                "inode_used": inode.get("used"),
+                "inode_free": inode.get("free"),
+                "inode_percent": inode.get("percent"),
             })
+            if inode and inode.get("percent", 0) > 90:
+                inode_alerts.append({
+                    "mountpoint": part.mountpoint,
+                    "percent": inode["percent"]
+                })
         except Exception:
             continue
-    # Network I/O stats per NIC
+
     net_io = psutil.net_io_counters(pernic=True)
     net_stats = []
     for nic, stats in net_io.items():
@@ -336,9 +395,9 @@ def collect_metrics() -> Dict[str, Any]:
             "dropin": stats.dropin,
             "dropout": stats.dropout,
         })
-    # Top 5 processes by CPU and memory usage
+
     processes = []
-    for p in sorted(psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']),
+    for p in sorted(psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status']),
                    key=lambda p: (p.info.get('cpu_percent', 0), p.info.get('memory_percent', 0)),
                    reverse=True)[:5]:
         try:
@@ -346,22 +405,25 @@ def collect_metrics() -> Dict[str, Any]:
                 "pid": p.info["pid"],
                 "name": p.info["name"],
                 "cpu": p.info["cpu_percent"],
-                "memory": p.info["memory_percent"]
+                "memory": p.info["memory_percent"],
+                "status": p.info.get("status")
             })
         except Exception:
             continue
 
-    # Hardware summary dictionary (excluding motherboard)
     hardware = {
         "cpu": get_cpu_name(),
         "gpus": [gpu["name"] for gpu in get_all_gpus()],
         "disks": get_disk_names(),
         "network_interfaces": get_nic_names(),
         "ram": get_ram_info(),
-        # "motherboard": get_motherboard_info(),  # Removed as requested
     }
 
-    # Compose metrics payload
+    sensors_temp = get_sensors_temperature()
+    time_drift = get_time_drift()
+    zombie_procs = get_zombie_process_count()
+    critical_procs = check_critical_processes(["sshd", "nginx", "postgres"])
+
     data = {
         "agent_id": get_unique_id(),
         "device": socket.gethostname(),
@@ -389,11 +451,41 @@ def collect_metrics() -> Dict[str, Any]:
         "processes": processes,
         "timestamp": time.time(),
         "gpus": get_all_gpus(),
-        "hardware": hardware
+        "hardware": hardware,
+        "inode_alerts": inode_alerts,
+        "sensors_temperature": sensors_temp,
+        "time_drift": time_drift,
+        "zombie_processes": zombie_procs,
+        "critical_processes": critical_procs
     }
+
+    # ---------- Preemptive Abnormal Alerts ----------
+    preemptive_alerts = []
+
+    if cpu_total > 85:
+        preemptive_alerts.append("High CPU usage (>85%)")
+    if mem.percent > 85:
+        preemptive_alerts.append("High memory usage (>85%)")
+    for disk in disks:
+        if disk["percent"] > 90:
+            preemptive_alerts.append(f"Disk nearly full on {disk['mountpoint']}")
+    for dev, sensors in sensors_temp.items():
+        for s in sensors:
+            if s["high"] and s["current"] and s["current"] >= s["high"] - 10:
+                preemptive_alerts.append(f"High temperature on {dev} ({s['current']}°C)")
+    if _last_metrics:
+        if abs(cpu_total - _last_metrics["cpu"]) > 30:
+            preemptive_alerts.append("CPU usage spike (>30%)")
+        if abs(mem.percent - _last_metrics["mem"]) > 30:
+            preemptive_alerts.append("Memory usage spike (>30%)")
+    _last_metrics = {"cpu": cpu_total, "mem": mem.percent}
+
+    data["preemptive_alerts"] = preemptive_alerts
+    data["custom_alert"] = custom_alert_flag or bool(preemptive_alerts) or os.path.exists("TRIGGER_CUSTOM_ALERT")
+
     return data
 
-# Main loop: collect and POST metrics to backend at the specified interval
+# ---------- Main ----------
 def main(server_url, interval=5):
     logger.info("Agent started. Posting to %s every %ss", server_url, interval)
     while True:
@@ -409,5 +501,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--server", type=str, required=True, help="Backend server URL")
     parser.add_argument("--interval", type=int, default=5, help="Seconds between metric reports")
+    parser.add_argument("--custom-alert", action="store_true", help="Trigger a custom alert in next report for testing")
     args = parser.parse_args()
     main(args.server, args.interval)

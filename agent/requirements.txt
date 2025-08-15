@@ -1,2 +1,5 @@
 psutil
 requests
+GPUtil
+wmi ; platform_system == "Windows"
+pyamdgpuinfo ; platform_system == "Linux"
