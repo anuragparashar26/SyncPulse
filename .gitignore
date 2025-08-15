@@ -1,0 +1,24 @@
+# Ignore Python virtual environments
+venv/
+**/venv/
+
+# Ignore Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore agent-specific runtime files
+agent/agent_id.txt
+
+# Ignore environment and OS files
+*.env
+*.DS_Store
+*.swp
+*.swo
+
+# (Optional) Ignore log files
+*.log
+
+# (Optional) Ignore backup files
+*~
