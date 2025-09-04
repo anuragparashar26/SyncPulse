@@ -1,5 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../agent')))
+import agent
 from typing import Dict, List, Optional
 import time
 import threading
@@ -129,3 +133,21 @@ async def health():
         "total_alerts": len(alerts),
         "server_time": time.time()
     }
+
+# New endpoint for GPU info
+@app.get("/gpu")
+async def get_gpu_info():
+    gpus = []
+    try:
+        gpus.extend(agent.get_nvidia_gpus())
+    except Exception:
+        pass
+    try:
+        gpus.extend(agent.get_amd_gpus())
+    except Exception:
+        pass
+    try:
+        gpus.extend(agent.get_intel_gpus())
+    except Exception:
+        pass
+    return {"gpus": gpus}

@@ -397,9 +397,10 @@ def collect_metrics(custom_alert_flag=False) -> Dict[str, Any]:
         })
 
     processes = []
+    # collect top N processes (increased from 5 to 15 for richer UI display)
     for p in sorted(psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status']),
                    key=lambda p: (p.info.get('cpu_percent', 0), p.info.get('memory_percent', 0)),
-                   reverse=True)[:5]:
+                   reverse=True)[:15]:
         try:
             processes.append({
                 "pid": p.info["pid"],
