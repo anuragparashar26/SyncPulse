@@ -342,28 +342,4 @@ Query:
 - Per‑agent staleness and richer charts
 - Extend /services (TLS, DNS/NTP, cert expiry)
 
----
-- Rotation: Backend buffer is capped at last 100 snapshots per agent.
-- Scaling: Front with reverse proxy; consider persistence and horizontal scale for larger fleets.
-
-10. Security Considerations
-- Restrict CORS to trusted origins.
-- Place FastAPI behind a reverse proxy.
-- Protect /services if exposing publicly (it reveals host reachability).
-- Consider mTLS/API keys for agent → backend.
-
-11. Troubleshooting
-- Frontend can’t reach backend:
-  - Verify src/setupProxy.js or reverse proxy mapping /api → backend.
-- No metrics shown:
-  - Ensure agent sends to correct backend URL and agent_id is set.
-- GPU data missing:
-  - Confirm GPU collection functions exist on host and are callable.
-
-12. Roadmap
-- Optional persistence for long-term history.
-- AuthN/AuthZ for APIs and UI.
-- Per-agent staleness indicators and richer charts.
-- Extend /services (TLS checks, DNS/NTP status, cert expiry).
-
 End of document.
