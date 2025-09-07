@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Card, CardContent, Typography, Grid, CircularProgress, MenuItem, Select, InputLabel, FormControl, Chip, Box, LinearProgress, Divider, Alert, Paper, Stack, IconButton, Tooltip } from "@mui/material";
 import { Line, Pie } from "react-chartjs-2";
-import { Refresh, Computer, Memory, Storage, NetworkCheck, Speed, Settings, Security } from "@mui/icons-material";
+import { Refresh, Computer, Memory, Storage, NetworkCheck, Speed, Settings, Security, GraphicEq } from "@mui/icons-material";
 
 import {
   Chart as ChartJS,
@@ -85,38 +85,85 @@ function Metrics() {
 
     // GPU Info Section
     const renderGpuInfo = () => (
-      <Card sx={{ mb: 2 }}>
-        <CardContent>
-          <Typography variant="h6">System GPUs</Typography>
-          {gpuLoading ? <CircularProgress size={20} /> : (
-            gpuInfo.length === 0 ? <Typography>No GPUs detected.</Typography> : (
-              <Grid container spacing={2}>
-                {gpuInfo.map((g, i) => (
-                  <Grid key={i} item xs={12} md={3}>
-                    <Box display="flex" flexDirection="column" alignItems="flex-start" mb={1}>
-                      <Typography variant="overline" color="text.secondary" fontWeight={700}>
+      <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, mb: 4, overflowX: 'auto', width: '100%' }}>
+        {gpuLoading ? (
+          <Card sx={{ flex: 1, minWidth: 300, backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <GraphicEq />
+                System GPUs
+              </Typography>
+              <CircularProgress size={20} sx={{ mt: 2 }} />
+            </CardContent>
+          </Card>
+        ) : (
+          gpuInfo.length === 0 ? (
+            <Card sx={{ flex: 1, minWidth: 300, backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <GraphicEq />
+                  System GPUs
+                </Typography>
+                <Typography>No GPUs detected.</Typography>
+              </CardContent>
+            </Card>
+          ) : (
+            gpuInfo.map((g, i) => {
+              const load = typeof g.load === 'number' ? g.load : (typeof g.utilization === 'number' ? g.utilization : null);
+              const memUsed = typeof g.used_memory_MB === 'number' ? g.used_memory_MB : (typeof g.vram_usage_MB === 'number' ? g.vram_usage_MB : null);
+              const memTotal = typeof g.total_memory_MB === 'number' ? g.total_memory_MB : (typeof g.vram_total_MB === 'number' ? g.vram_total_MB : null);
+              const memPercent = (memUsed !== null && memTotal !== null && memTotal > 0) ? (memUsed / memTotal) * 100 : null;
+
+              return (
+                <Card key={i} sx={{ flex: 1, minWidth: 300, backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+                  <CardContent>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                      <GraphicEq />
+                      <Typography variant="h6" fontWeight={700}>
                         {g.vendor}
                       </Typography>
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        {g.name}
-                      </Typography>
                     </Box>
-                    {typeof g.load === 'number' && <Typography variant="caption">Load: {g.load}%</Typography>}
-                    {typeof g.utilization === 'number' && g.load === undefined && <Typography variant="caption">Load: {g.utilization}%</Typography>}
-                    {typeof g.temperature_C === 'number' && <Typography variant="caption" display="block">Temp: {g.temperature_C}°C</Typography>}
-                    {(typeof g.used_memory_MB === 'number' && typeof g.total_memory_MB === 'number') && (
-                      <Typography variant="caption" display="block">Mem: {g.used_memory_MB} / {g.total_memory_MB} MB</Typography>
+                    <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                      {g.name}
+                    </Typography>
+                    
+                    {/* GPU Load Graph */}
+                    {load !== null && (
+                      <Box mt={2}>
+                        <Typography variant="caption" color="text.secondary">Load: {load.toFixed(1)}%</Typography>
+                        <LinearProgress
+                          variant="determinate"
+                          value={load}
+                          sx={{ mt: 0.5, height: 8, borderRadius: 4, backgroundColor: '#333', '& .MuiLinearProgress-bar': { backgroundColor: '#888' } }}
+                        />
+                      </Box>
                     )}
-                    {(typeof g.vram_usage_MB === 'number' && typeof g.vram_total_MB === 'number') && (
-                      <Typography variant="caption" display="block">Mem: {g.vram_usage_MB} / {g.vram_total_MB} MB</Typography>
+
+                    {/* GPU Memory Graph */}
+                    {memPercent !== null && (
+                      <Box mt={2}>
+                        <Typography variant="caption" color="text.secondary">Memory: {memUsed.toFixed(0)} / {memTotal.toFixed(0)} MB</Typography>
+                        <LinearProgress
+                          variant="determinate"
+                          value={memPercent}
+                          sx={{ mt: 0.5, height: 8, borderRadius: 4, backgroundColor: '#333', '& .MuiLinearProgress-bar': { backgroundColor: '#888' } }}
+                        />
+                      </Box>
                     )}
-                  </Grid>
-                ))}
-              </Grid>
-            )
-          )}
-        </CardContent>
-      </Card>
+
+                    {/* Temperature */}
+                    {typeof g.temperature_C === 'number' && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                        Temp: {g.temperature_C}°C
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })
+          )
+        )}
+      </Box>
     );
 
   const agent = metrics.find(m => m.agent_id === selectedAgent);
@@ -696,4 +743,3 @@ function Metrics() {
 }
 
 export default Metrics;
-
