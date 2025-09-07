@@ -1,3 +1,4 @@
+from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import sys
@@ -221,3 +222,33 @@ async def get_history(agent_id: str, samples: int = 24):
         mem_result = [pad_value_mem] * padding_needed + mem_data
     
     return {"cpu": cpu_result, "mem": mem_result, "interval_sec": interval}
+
+@app.get("/overview")
+async def get_overview():
+    import agent
+    import platform
+    # Raw values from agent
+    gpu_info = None
+    if hasattr(agent, "get_all_gpus"):
+        gpus = agent.get_all_gpus()
+        if gpus and isinstance(gpus, list):
+            gpu_info = gpus[0].get("name") if isinstance(gpus[0], dict) else gpus[0]
+
+    ram_info = None
+    if hasattr(agent, "get_ram_info"):
+        ram = agent.get_ram_info()
+        if isinstance(ram, dict) and "total_MB" in ram:
+            ram_info = f"{round(ram['total_MB']/1024)} GB"
+        elif isinstance(ram, str):
+            ram_info = ram
+
+    overview = {
+        "device_name": platform.node(),
+        "hostname": agent.get_hostname() if hasattr(agent, "get_hostname") else platform.node(),
+        "os_name": platform.system(),
+        "os_version": platform.release(),
+        "cpu": agent.get_cpu_name() if hasattr(agent, "get_cpu_name") else None,
+        "gpu": gpu_info,
+        "ram": ram_info,
+    }
+    return overview
