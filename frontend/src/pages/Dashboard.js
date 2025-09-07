@@ -135,7 +135,6 @@ function Dashboard() {
           </FormControl>
           {agent && (
             <Chip 
-              icon={<Computer />}
               label={`${agent.device || 'Device'} Online`} 
               color="success" 
               variant="outlined"

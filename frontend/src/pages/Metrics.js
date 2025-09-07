@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Card, CardContent, Typography, Grid, CircularProgress, MenuItem, Select, InputLabel, FormControl, Chip, Box, LinearProgress, Divider, Alert, Paper, Stack, IconButton, Tooltip } from "@mui/material";
+import { Card, CardContent, Typography, Grid, CircularProgress, MenuItem, Select, InputLabel, FormControl, Chip, Box, LinearProgress, Divider, Alert, Paper, Stack, IconButton, Tooltip, List, ListItem, ListItemText, ListItemIcon } from "@mui/material";
 import { Line, Pie } from "react-chartjs-2";
-import { Refresh, Computer, Memory, Storage, NetworkCheck, Speed, Settings, Security, GraphicEq } from "@mui/icons-material";
+import { Refresh, Computer, Memory, Storage, NetworkCheck, Speed, Settings, Security, GraphicEq, Circle } from "@mui/icons-material";
 
 import {
   Chart as ChartJS,
@@ -24,6 +24,7 @@ function Metrics() {
   const [gpuInfo, setGpuInfo] = useState([]);
   const [gpuLoading, setGpuLoading] = useState(true);
   const [hist, setHist] = useState(null);
+  const [services, setServices] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -79,6 +80,18 @@ function Metrics() {
         return () => { active = false; clearInterval(interval); };
       }
     }, [selectedAgent]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchServices = () => {
+      axios.get("/api/services").then(res => {
+        if (active) setServices(res.data);
+      }).catch(() => {});
+    };
+    fetchServices();
+    const interval = setInterval(fetchServices, 10000);
+    return () => { active = false; clearInterval(interval); };
+  }, []);
 
   if (loading) return <CircularProgress />;
   if (!metrics.length) return <Typography>No metrics available.</Typography>;
@@ -699,39 +712,94 @@ function Metrics() {
                 <Box sx={{ bgcolor: '#333', color: 'white', p: 2 }}>
                   <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Security />
-                    System Health
+                    Services
                   </Typography>
                 </Box>
                 <CardContent sx={{ p: 3 }}>
-                  <Stack spacing={3}>
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>Zombie Processes</Typography>
-                      <Box display="flex" justifyContent="space-between" alignItems="center">
-                        <Typography variant="body2">Count:</Typography>
-                        <Chip 
-                          label={agent.zombie_processes} 
-                          sx={{ backgroundColor: '#333', color: 'white' }}
-                        />
-                      </Box>
-                    </Box>
-                    
-                    <Divider />
-                    
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>Critical Services</Typography>
-                      <Stack spacing={1}>
-                        {agent.critical_processes && Object.entries(agent.critical_processes).map(([proc, running]) => (
-                          <Box key={proc} display="flex" justifyContent="space-between" alignItems="center">
-                            <Typography variant="body2">{proc}:</Typography>
-                            <Chip 
-                              label={running ? 'Running' : 'Stopped'} 
-                              sx={{ backgroundColor: running ? '#555' : '#333', color: 'white' }}
+                  {/* Ports */}
+                  <Typography variant="subtitle2" gutterBottom>Network / Ports</Typography>
+                  <List dense disablePadding>
+                    {(services?.ports ? ['ssh','http','https','mysql','postgresql','redis','mongo'].filter(k => services.ports[k]).map((key) => {
+                      const p = services.ports[key];
+                      const up = !!p?.open;
+                      return (
+                        <ListItem key={key} sx={{ py: 0.25 }}>
+                          <ListItemIcon sx={{ minWidth: 26 }}>
+                            <Circle fontSize="small" sx={{ color: up ? 'success.main' : 'action.disabled' }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primaryTypographyProps={{ variant: 'body2' }}
+                            secondaryTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
+                            primary={key.toUpperCase()}
+                            secondary={`Port ${p.port}`}
+                          />
+                        </ListItem>
+                      );
+                    }) : null)}
+                  </List>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {/* Docker */}
+                  <Typography variant="subtitle2" gutterBottom>Docker</Typography>
+                  <List dense disablePadding>
+                    <ListItem sx={{ py: 0.25 }}>
+                      <ListItemIcon sx={{ minWidth: 26 }}>
+                        <Circle fontSize="small" sx={{ color: services?.docker?.running ? 'success.main' : 'action.disabled' }} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primaryTypographyProps={{ variant: 'body2' }}
+                        secondaryTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
+                        primary={`Daemon ${services?.docker?.running ? 'Running' : 'Stopped'}`}
+                        secondary={`Containers: ${services?.docker?.running_containers ?? 0}`}
+                      />
+                    </ListItem>
+                  </List>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {/* Databases */}
+                  <Typography variant="subtitle2" gutterBottom>Databases</Typography>
+                  <List dense disablePadding>
+                    {services?.databases && Object.entries(services.databases).map(([name, s]) => {
+                      const up = !!s?.reachable;
+                      return (
+                        <ListItem key={name} sx={{ py: 0.25 }}>
+                          <ListItemIcon sx={{ minWidth: 26 }}>
+                            <Circle fontSize="small" sx={{ color: up ? 'success.main' : 'action.disabled' }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primaryTypographyProps={{ variant: 'body2' }}
+                            primary={name.toUpperCase()}
+                          />
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {/* Essentials - only show reachable for a cleaner UI */}
+                  <Typography variant="subtitle2" gutterBottom>Essentials</Typography>
+                  <List dense disablePadding>
+                    {services?.essentials && Object.entries(services.essentials).filter(([, s]) => s?.reachable).length > 0 ? (
+                      Object.entries(services.essentials)
+                        .filter(([, s]) => s?.reachable)
+                        .map(([name]) => (
+                          <ListItem key={name} sx={{ py: 0.25 }}>
+                            <ListItemIcon sx={{ minWidth: 26 }}>
+                              <Circle fontSize="small" sx={{ color: 'success.main' }} />
+                            </ListItemIcon>
+                            <ListItemText
+                              primaryTypographyProps={{ variant: 'body2' }}
+                              primary={name.toUpperCase()}
                             />
-                          </Box>
-                        ))}
-                      </Stack>
-                    </Box>
-                  </Stack>
+                          </ListItem>
+                        ))
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">None detected</Typography>
+                    )}
+                  </List>
                 </CardContent>
               </Paper>
             </Grid>

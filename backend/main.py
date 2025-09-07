@@ -8,6 +8,9 @@ import agent
 from typing import Dict, List, Optional
 import time
 import threading
+import platform
+import subprocess
+import socket
 
 app = FastAPI()
 
@@ -223,10 +226,20 @@ async def get_history(agent_id: str, samples: int = 24):
     
     return {"cpu": cpu_result, "mem": mem_result, "interval_sec": interval}
 
+def get_distro():
+    if platform.system() == 'Linux':
+        try:
+            with open('/etc/os-release', 'r') as f:
+                for line in f:
+                    if line.startswith('PRETTY_NAME='):
+                        return line.split('=', 1)[1].strip().strip('"')
+        except Exception:
+            pass
+    return platform.system()
+
 @app.get("/overview")
 async def get_overview():
     import agent
-    import platform
     # Raw values from agent
     gpu_info = None
     if hasattr(agent, "get_all_gpus"):
@@ -245,10 +258,81 @@ async def get_overview():
     overview = {
         "device_name": platform.node(),
         "hostname": agent.get_hostname() if hasattr(agent, "get_hostname") else platform.node(),
-        "os_name": platform.system(),
+        "os_name": get_distro(),
         "os_version": platform.release(),
         "cpu": agent.get_cpu_name() if hasattr(agent, "get_cpu_name") else None,
         "gpu": gpu_info,
         "ram": ram_info,
     }
     return overview
+
+def _is_port_open(port: int, host: str = "127.0.0.1", timeout: float = 0.5) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+def _docker_status():
+    running = False
+    running_containers = 0
+    try:
+        # Check docker daemon
+        res = subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1)
+        running = (res.returncode == 0)
+        if running:
+            ps = subprocess.run(["docker", "ps", "-q"], capture_output=True, text=True, timeout=1)
+            running_containers = len([l for l in ps.stdout.splitlines() if l.strip()])
+    except Exception:
+        pass
+    return {"running": running, "running_containers": running_containers}
+
+def _uptime_seconds():
+    # Linux fast path
+    try:
+        with open("/proc/uptime") as f:
+            return int(float(f.read().split()[0]))
+    except Exception:
+        pass
+    # Fallback None
+    return None
+
+def _load_avg():
+    try:
+        return list(os.getloadavg())
+    except Exception:
+        return None
+
+@app.get("/services")
+async def services():
+    ports = {
+        "ssh": {"port": 22, "open": _is_port_open(22)},
+        "http": {"port": 80, "open": _is_port_open(80)},
+        "https": {"port": 443, "open": _is_port_open(443)},
+        "mysql": {"port": 3306, "open": _is_port_open(3306)},
+        "postgresql": {"port": 5432, "open": _is_port_open(5432)},
+        "redis": {"port": 6379, "open": _is_port_open(6379)},
+        "mongo": {"port": 27017, "open": _is_port_open(27017)},
+    }
+    docker = _docker_status()
+    databases = {
+        "mysql": {"reachable": ports["mysql"]["open"]},
+        "postgresql": {"reachable": ports["postgresql"]["open"]},
+        "mongo": {"reachable": ports["mongo"]["open"]},
+    }
+    sshd = {"listening": ports["ssh"]["open"]}
+    essentials = {
+        "nginx": {"reachable": ports["http"]["open"] or ports["https"]["open"]},
+        "apache": {"reachable": ports["http"]["open"] or ports["https"]["open"]},
+        "redis": {"reachable": ports["redis"]["open"]},
+        "rabbitmq": {"reachable": _is_port_open(5672)},
+        "kafka": {"reachable": _is_port_open(9092)},
+    }
+
+    return {
+        "ports": ports,
+        "docker": docker,
+        "databases": databases,
+        "sshd": sshd,
+        "essentials": essentials,
+    }
