@@ -47,7 +47,7 @@ function Metrics() {
     useEffect(() => {
       let mounted = true;
       const fetchGpu = () => {
-        axios.get("/gpu").then(res => {
+        axios.get("http://localhost:8000/gpu").then(res => {
           if (mounted) {
             setGpuInfo(res.data.gpus || []);
             setGpuLoading(false);
@@ -93,10 +93,23 @@ function Metrics() {
               <Grid container spacing={2}>
                 {gpuInfo.map((g, i) => (
                   <Grid key={i} item xs={12} md={3}>
-                    <Typography variant="subtitle2">{g.vendor} {g.name}</Typography>
-                    {g.load !== undefined && <Typography variant="caption">Load: {g.load || g.utilization || 0}%</Typography>}
-                    {g.temperature_C !== undefined && <Typography variant="caption" display="block">Temp: {g.temperature_C}°C</Typography>}
-                    {g.total_memory_MB !== undefined && <Typography variant="caption" display="block">Mem: {g.used_memory_MB || g.vram_usage_MB || 0} / {g.total_memory_MB || g.vram_total_MB || 0} MB</Typography>}
+                    <Box display="flex" flexDirection="column" alignItems="flex-start" mb={1}>
+                      <Typography variant="overline" color="text.secondary" fontWeight={700}>
+                        {g.vendor}
+                      </Typography>
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        {g.name}
+                      </Typography>
+                    </Box>
+                    {typeof g.load === 'number' && <Typography variant="caption">Load: {g.load}%</Typography>}
+                    {typeof g.utilization === 'number' && g.load === undefined && <Typography variant="caption">Load: {g.utilization}%</Typography>}
+                    {typeof g.temperature_C === 'number' && <Typography variant="caption" display="block">Temp: {g.temperature_C}°C</Typography>}
+                    {(typeof g.used_memory_MB === 'number' && typeof g.total_memory_MB === 'number') && (
+                      <Typography variant="caption" display="block">Mem: {g.used_memory_MB} / {g.total_memory_MB} MB</Typography>
+                    )}
+                    {(typeof g.vram_usage_MB === 'number' && typeof g.vram_total_MB === 'number') && (
+                      <Typography variant="caption" display="block">Mem: {g.vram_usage_MB} / {g.vram_total_MB} MB</Typography>
+                    )}
                   </Grid>
                 ))}
               </Grid>
