@@ -140,9 +140,8 @@ function Metrics() {
         <Box>
           {/* Enhanced System Overview Cards */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            {/* CPU Usage card first, with bar */}
             <Grid item xs={12} md={3}>
-              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+              <Card sx={{ height: '100%', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                     <Computer />
@@ -161,23 +160,15 @@ function Metrics() {
                       mt: 2,
                       height: 8,
                       borderRadius: 4,
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      '& .MuiLinearProgress-bar': { backgroundColor: 'white' }
+                      backgroundColor: '#333',
+                      '& .MuiLinearProgress-bar': { backgroundColor: '#888' }
                     }}
-                    color={
-                      agent.cpu.total_percent > 90
-                        ? 'error'
-                        : agent.cpu.total_percent > 75
-                        ? 'warning'
-                        : 'success'
-                    }
                   />
                 </CardContent>
               </Card>
             </Grid>
-            {/* Memory Usage card */}
             <Grid item xs={12} md={3}>
-              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+              <Card sx={{ height: '100%', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                     <Memory />
@@ -196,16 +187,15 @@ function Metrics() {
                       mt: 2, 
                       height: 8, 
                       borderRadius: 4,
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      '& .MuiLinearProgress-bar': { backgroundColor: 'white' }
+                      backgroundColor: '#333',
+                      '& .MuiLinearProgress-bar': { backgroundColor: '#888' }
                     }} 
                   />
                 </CardContent>
               </Card>
             </Grid>
-            {/* Swap Usage card */}
             <Grid item xs={12} md={3}>
-              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+              <Card sx={{ height: '100%', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                     <Storage />
@@ -224,16 +214,15 @@ function Metrics() {
                       mt: 2, 
                       height: 8, 
                       borderRadius: 4,
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      '& .MuiLinearProgress-bar': { backgroundColor: 'white' }
+                      backgroundColor: '#333',
+                      '& .MuiLinearProgress-bar': { backgroundColor: '#888' }
                     }} 
                   />
                 </CardContent>
               </Card>
             </Grid>
-            {/* System Uptime card */}
             <Grid item xs={12} md={3}>
-              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
+              <Card sx={{ height: '100%', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                     <Speed />
@@ -253,8 +242,8 @@ function Metrics() {
           {/* Enhanced Time Series Charts */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
             <Grid item xs={12} md={6}>
-              <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
-                <Box sx={{ bgcolor: 'primary.main', color: 'white', p: 2 }}>
+              <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+                <Box sx={{ bgcolor: '#333', color: 'white', p: 2 }}>
                   <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Computer />
                     CPU Usage Trend
@@ -272,8 +261,8 @@ function Metrics() {
                           datasets: [{
                             label: 'CPU %',
                             data: hist.cpu,
-                            borderColor: '#1976d2',
-                            backgroundColor: 'rgba(25,118,210,0.1)',
+                            borderColor: '#888888', // Minimal gray color
+                            backgroundColor: 'rgba(136,136,136,0.1)',
                             fill: true,
                             tension: 0.4,
                             borderWidth: 3,
@@ -289,18 +278,18 @@ function Metrics() {
                               beginAtZero: true, 
                               max: 100,
                               grid: { color: 'rgba(0,0,0,0.1)' },
-                              ticks: { color: '#666' }
+                              ticks: { color: '#ccc' }
                             },
                             x: { 
                               grid: { display: false },
-                              ticks: { color: '#666' }
+                              ticks: { color: '#ccc' }
                             }
                           },
                           plugins: {
                             legend: { display: false },
                             tooltip: {
-                              backgroundColor: 'rgba(0,0,0,0.8)',
-                              borderColor: '#1976d2',
+                              backgroundColor: '#333',
+                              borderColor: '#888',
                               borderWidth: 1,
                             }
                           }
@@ -320,8 +309,8 @@ function Metrics() {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
-                <Box sx={{ bgcolor: 'error.main', color: 'white', p: 2 }}>
+              <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+                <Box sx={{ bgcolor: '#333', color: 'white', p: 2 }}>
                   <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Memory />
                     Memory Usage Trend
@@ -339,8 +328,8 @@ function Metrics() {
                           datasets: [{
                             label: 'Memory %',
                             data: hist.mem,
-                            borderColor: '#d32f2f',
-                            backgroundColor: 'rgba(211,47,47,0.1)',
+                            borderColor: '#888888', // Minimal gray color
+                            backgroundColor: 'rgba(136,136,136,0.1)',
                             fill: true,
                             tension: 0.4,
                             borderWidth: 3,
@@ -356,18 +345,18 @@ function Metrics() {
                               beginAtZero: true, 
                               max: 100,
                               grid: { color: 'rgba(0,0,0,0.1)' },
-                              ticks: { color: '#666' }
+                              ticks: { color: '#ccc' }
                             },
                             x: { 
                               grid: { display: false },
-                              ticks: { color: '#666' }
+                              ticks: { color: '#ccc' }
                             }
                           },
                           plugins: {
                             legend: { display: false },
                             tooltip: {
-                              backgroundColor: 'rgba(0,0,0,0.8)',
-                              borderColor: '#d32f2f',
+                              backgroundColor: '#333',
+                              borderColor: '#888',
                               borderWidth: 1,
                             }
                           }
@@ -391,8 +380,8 @@ function Metrics() {
           {renderGpuInfo()}
           
           {/* Enhanced Network Information */}
-          <Paper elevation={2} sx={{ mb: 4, borderRadius: 3, overflow: 'hidden' }}>
-            <Box sx={{ bgcolor: 'success.main', color: 'white', p: 2 }}>
+          <Paper elevation={2} sx={{ mb: 4, borderRadius: 3, overflow: 'hidden', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+            <Box sx={{ bgcolor: '#333', color: 'white', p: 2 }}>
               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <NetworkCheck />
                 Network Activity
@@ -403,8 +392,8 @@ function Metrics() {
                 <Box>
                   <Grid container spacing={3} sx={{ mb: 3 }}>
                     <Grid item xs={12} md={6}>
-                      <Card variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'success.main' }}>
-                        <Typography variant="h4" color="success.main" fontWeight={700}>
+                      <Card variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: '#333', backgroundColor: '#1e1e1e' }}>
+                        <Typography variant="h4" color="primary" fontWeight={700}>
                           {(agent.network.reduce((acc, n) => acc + (n.bytes_recv || 0), 0) / 1024 / 1024 * 8).toFixed(2)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -413,8 +402,8 @@ function Metrics() {
                       </Card>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                      <Card variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'warning.main' }}>
-                        <Typography variant="h4" color="warning.main" fontWeight={700}>
+                      <Card variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: '#333', backgroundColor: '#1e1e1e' }}>
+                        <Typography variant="h4" color="primary" fontWeight={700}>
                           {(agent.network.reduce((acc, n) => acc + (n.bytes_sent || 0), 0) / 1024 / 1024 * 8).toFixed(2)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -432,7 +421,7 @@ function Metrics() {
                   <Grid container spacing={2}>
                     {agent.network.map((iface, index) => (
                       <Grid item xs={12} sm={6} md={4} key={index}>
-                        <Card variant="outlined" sx={{ height: '100%', transition: 'all 0.2s', '&:hover': { boxShadow: 3 } }}>
+                        <Card variant="outlined" sx={{ height: '100%', transition: 'all 0.2s', '&:hover': { boxShadow: 3 }, borderColor: '#333', backgroundColor: '#1e1e1e' }}>
                           <CardContent>
                             <Typography variant="subtitle2" color="primary" fontWeight={600}>
                               {iface.interface || `Interface ${index + 1}`}
@@ -440,11 +429,11 @@ function Metrics() {
                             <Stack spacing={1} mt={1}>
                               <Box display="flex" justifyContent="space-between">
                                 <Typography variant="caption" color="text.secondary">Download:</Typography>
-                                <Chip size="small" label={`${(iface.bytes_recv / 1024 / 1024 * 8).toFixed(2)} Mb/s`} color="success" />
+                                <Chip size="small" label={`${(iface.bytes_recv / 1024 / 1024 * 8).toFixed(2)} Mb/s`} sx={{ backgroundColor: '#333', color: 'white' }} />
                               </Box>
                               <Box display="flex" justifyContent="space-between">
                                 <Typography variant="caption" color="text.secondary">Upload:</Typography>
-                                <Chip size="small" label={`${(iface.bytes_sent / 1024 / 1024 * 8).toFixed(2)} Mb/s`} color="warning" />
+                                <Chip size="small" label={`${(iface.bytes_sent / 1024 / 1024 * 8).toFixed(2)} Mb/s`} sx={{ backgroundColor: '#333', color: 'white' }} />
                               </Box>
                             </Stack>
                           </CardContent>
@@ -464,7 +453,7 @@ function Metrics() {
           {/* Temperature Sensors */}
           {agent.sensors_temperature && Object.keys(agent.sensors_temperature).length > 0 && (
             <Paper elevation={2} sx={{ mb: 4, borderRadius: 3, overflow: 'hidden' }}>
-              <Box sx={{ bgcolor: 'warning.main', color: 'white', p: 2 }}>
+              <Box sx={{ bgcolor: '#333', color: 'white', p: 2 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Settings />
                   Temperature Sensors
@@ -474,7 +463,7 @@ function Metrics() {
                 <Grid container spacing={2}>
                   {Object.entries(agent.sensors_temperature).map(([group, sensors]) => (
                     <Grid item xs={12} md={6} key={group}>
-                      <Card variant="outlined" sx={{ height: '100%' }}>
+                      <Card variant="outlined" sx={{ height: '100%', borderColor: '#333', backgroundColor: '#1e1e1e' }}>
                         <CardContent>
                           <Typography variant="subtitle1" fontWeight={600} mb={2}>
                             {group}
@@ -490,7 +479,7 @@ function Metrics() {
                                     {sensor.current ? `${sensor.current}°C` : 'N/A'}
                                   </Typography>
                                   {sensor.high && sensor.current && sensor.current >= sensor.high && (
-                                    <Chip size="small" label="High" color="error" />
+                                    <Chip size="small" label="High" sx={{ backgroundColor: '#555', color: 'white' }} />
                                   )}
                                 </Box>
                               </Box>
@@ -508,8 +497,8 @@ function Metrics() {
           {/* Enhanced CPU and Storage Section */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
             <Grid item xs={12} md={6}>
-              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden' }}>
-                <Box sx={{ bgcolor: 'info.main', color: 'white', p: 2 }}>
+              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+                <Box sx={{ bgcolor: '#333', color: 'white', p: 2 }}>
                   <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Computer />
                     CPU Core Usage
@@ -532,9 +521,9 @@ function Metrics() {
                             flex: 1, 
                             height: 12, 
                             borderRadius: 6,
-                            backgroundColor: 'rgba(0,0,0,0.1)'
+                            backgroundColor: '#333',
+                            '& .MuiLinearProgress-bar': { backgroundColor: '#888' }
                           }} 
-                          color={v > 85 ? 'error' : v > 60 ? 'warning' : 'primary'} 
                         />
                         <Typography variant="caption" sx={{ minWidth: 45, textAlign: 'right', fontWeight: 600 }}>
                           {v.toFixed(0)}%
@@ -547,8 +536,8 @@ function Metrics() {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden' }}>
-                <Box sx={{ bgcolor: 'secondary.main', color: 'white', p: 2 }}>
+              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+                <Box sx={{ bgcolor: '#333', color: 'white', p: 2 }}>
                   <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Storage />
                     Storage Usage
@@ -560,7 +549,7 @@ function Metrics() {
                       <Typography variant="subtitle1" fontWeight={600} mb={2}>
                         Root Filesystem ({d.mountpoint})
                       </Typography>
-                      <Typography variant="h4" color="secondary.main" fontWeight={700} mb={1}>
+                      <Typography variant="h4" color="primary" fontWeight={700} mb={1}>
                         {d.percent.toFixed(1)}%
                       </Typography>
                       <Typography variant="body2" color="text.secondary" mb={3}>
@@ -573,8 +562,8 @@ function Metrics() {
                             datasets: [{
                               data: [d.used, d.total - d.used],
                               backgroundColor: [
-                                d.percent > 90 ? '#d32f2f' : d.percent > 75 ? '#ed6c02' : '#2e7d32', 
-                                '#e0e0e0'
+                                '#888888', // Used - gray
+                                '#cccccc'  // Free - lighter gray
                               ],
                               borderWidth: 0,
                             }]
@@ -587,7 +576,8 @@ function Metrics() {
                                 position: 'bottom',
                                 labels: { 
                                   usePointStyle: true,
-                                  padding: 20
+                                  padding: 20,
+                                  color: '#ffffff' // White text for legend
                                 }
                               },
                               tooltip: { 
@@ -614,8 +604,8 @@ function Metrics() {
           {/* Enhanced Process Information */}
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
-              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden' }}>
-                <Box sx={{ bgcolor: 'warning.main', color: 'white', p: 2 }}>
+              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+                <Box sx={{ bgcolor: '#333', color: 'white', p: 2 }}>
                   <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Settings />
                     Top Processes
@@ -627,7 +617,7 @@ function Metrics() {
                 <CardContent sx={{ p: 2 }}>
                   <Stack spacing={1}>
                     {agent.processes.slice(0, 10).map(p => (
-                      <Card key={p.pid} variant="outlined" sx={{ p: 1.5 }}>
+                      <Card key={p.pid} variant="outlined" sx={{ p: 1.5, borderColor: '#333', backgroundColor: '#1e1e1e' }}>
                         <Box display="flex" justifyContent="space-between" alignItems="center">
                           <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Typography variant="body2" fontWeight={600} noWrap>
@@ -641,14 +631,12 @@ function Metrics() {
                             <Chip 
                               size="small" 
                               label={`${p.cpu.toFixed(1)}%`} 
-                              color={p.cpu > 50 ? 'error' : p.cpu > 20 ? 'warning' : 'default'}
-                              sx={{ minWidth: 60 }}
+                              sx={{ backgroundColor: '#333', color: 'white' }}
                             />
                             <Chip 
                               size="small" 
                               label={`${p.memory.toFixed(1)}%`} 
-                              variant="outlined"
-                              sx={{ minWidth: 60 }}
+                              sx={{ backgroundColor: '#333', color: 'white' }}
                             />
                           </Box>
                         </Box>
@@ -660,8 +648,8 @@ function Metrics() {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden' }}>
-                <Box sx={{ bgcolor: 'error.main', color: 'white', p: 2 }}>
+              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+                <Box sx={{ bgcolor: '#333', color: 'white', p: 2 }}>
                   <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Security />
                     System Health
@@ -675,8 +663,7 @@ function Metrics() {
                         <Typography variant="body2">Count:</Typography>
                         <Chip 
                           label={agent.zombie_processes} 
-                          color={agent.zombie_processes > 0 ? 'error' : 'success'}
-                          size="small"
+                          sx={{ backgroundColor: '#333', color: 'white' }}
                         />
                       </Box>
                     </Box>
@@ -691,9 +678,7 @@ function Metrics() {
                             <Typography variant="body2">{proc}:</Typography>
                             <Chip 
                               label={running ? 'Running' : 'Stopped'} 
-                              color={running ? 'success' : 'error'}
-                              size="small"
-                              variant={running ? 'outlined' : 'filled'}
+                              sx={{ backgroundColor: running ? '#555' : '#333', color: 'white' }}
                             />
                           </Box>
                         ))}
@@ -711,3 +696,4 @@ function Metrics() {
 }
 
 export default Metrics;
+

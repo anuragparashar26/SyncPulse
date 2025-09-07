@@ -31,11 +31,11 @@ function Alerts() {
     <Grid container spacing={3}>
       {alerts.map((alert, idx) => (
         <Grid item xs={12} md={6} key={idx}>
-          <Card sx={{ mb: 2 }}>
+          <Card sx={{ mb: 2, backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
             <CardContent>
               <Typography variant="h6">{alert.device}</Typography>
               <Typography>{alert.alert}</Typography>
-              <Chip label={alert.severity} color={alert.severity === "critical" ? "error" : "warning"} sx={{ mt: 1, mb: 1 }} />
+              <Chip label={alert.severity} color={alert.severity === "critical" ? "secondary" : "primary"} sx={{ mt: 1, mb: 1 }} />
               <Typography variant="body2" color="text.secondary">
                 {new Date(alert.timestamp * 1000).toLocaleString()}
               </Typography>
