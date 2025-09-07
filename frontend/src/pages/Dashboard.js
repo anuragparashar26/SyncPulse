@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Grid, CircularProgress, Typography, Card, CardContent, Chip, Box, Button, Alert, FormControl, InputLabel, Select, MenuItem, Divider } from "@mui/material";
+import { Grid, CircularProgress, Typography, Card, CardContent, Chip, Box, Button, Alert, FormControl, InputLabel, Select, MenuItem, Divider, Paper, Stack } from "@mui/material";
 import { CheckCircle, Error, Warning, Info, Dashboard as DashboardIcon, Assessment, Notifications, Computer, Memory, Storage, AccessTime } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 import StatCard from "../components/StatCard";
@@ -105,8 +105,44 @@ function Dashboard() {
         System Overview
       </Typography>
 
+      {/* Device Selector */}
+      <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
+        <Box display="flex" alignItems="center" gap={2}>
+          <FormControl sx={{ minWidth: 280 }}>
+            <InputLabel>Select Device</InputLabel>
+            <Select
+              value={selectedAgent}
+              label="Select Device"
+              onChange={e => setSelectedAgent(e.target.value)}
+              sx={{ borderRadius: 2 }}
+            >
+              {metrics.map(m => (
+                <MenuItem key={m.agent_id} value={m.agent_id}>
+                  <Box display="flex" flexDirection="column" alignItems="flex-start">
+                    <Typography variant="body2" fontWeight={600}>
+                      {m.device || 'Device'} - {m.agent_id.slice(0, 8)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {m.platform} {m.platform_release}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {agent && (
+            <Chip 
+              icon={<Computer />}
+              label={`${agent.device || 'Device'} Online`} 
+              color="success" 
+              variant="outlined" 
+            />
+          )}
+        </Box>
+      </Paper>
+
+      {/* System Health Summary */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* System Health Summary */}
         {health && (
           <>
             <Grid item xs={12} md={4}>
@@ -228,99 +264,6 @@ function Dashboard() {
                     </Grid>
                   ))}
                 </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-
-      {/* Selected Device Details */}
-      {agent && (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Selected Device: {agent.device || 'Device'} ({agent.agent_id.slice(0, 8)})
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                      title="CPU Usage"
-                      value={agent.cpu?.total_percent?.toFixed(1) || '0'}
-                      unit="%"
-                      percent={agent.cpu?.total_percent || 0}
-                      icon={<Computer />}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                      title="Memory Usage"
-                      value={agent.memory?.percent?.toFixed(1) || '0'}
-                      unit="%"
-                      percent={agent.memory?.percent || 0}
-                      icon={<Memory />}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                      title="Swap Usage"
-                      value={agent.memory?.swap_percent?.toFixed(1) || '0'}
-                      unit="%"
-                      percent={agent.memory?.swap_percent || 0}
-                      color="secondary"
-                      icon={<Storage />}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                      title="Uptime"
-                      value={(agent.uptime_sec / 3600)?.toFixed(1) || '0'}
-                      unit="h"
-                      icon={<AccessTime />}
-                    />
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Charts */}
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  CPU Usage (Last 2 min)
-                </Typography>
-                {hist && hist.cpu && hist.cpu.length > 0 ? (
-                  <TimeSeriesChart
-                    dataPoints={hist.cpu}
-                    labels={hist.cpu.map((_,i)=>`${i * (hist.interval_sec || 5)}s`)}
-                    label="CPU %"
-                    color="rgba(25,118,210,1)"
-                  />
-                ) : (
-                  <Typography variant="body2" color="text.secondary">Gathering samples...</Typography>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Memory Usage (Last 2 min)
-                </Typography>
-                {hist && hist.mem && hist.mem.length > 0 ? (
-                  <TimeSeriesChart
-                    dataPoints={hist.mem}
-                    labels={hist.mem.map((_,i)=>`${i * (hist.interval_sec || 5)}s`)}
-                    label="Memory %"
-                    color="rgba(211,47,47,1)"
-                  />
-                ) : (
-                  <Typography variant="body2" color="text.secondary">Gathering samples...</Typography>
-                )}
               </CardContent>
             </Card>
           </Grid>

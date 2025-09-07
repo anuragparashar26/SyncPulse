@@ -42,8 +42,10 @@ def check_abnormal(metrics, prev_alerts: Optional[set] = None):
         alerts_local.append({"alert": "High swap usage", "severity": "warning"})
     # Disks
     for d in disks:
-        if d.get("percent", 0) > 90:
+        # Only alert for root mountpoint
+        if d.get("mountpoint", "") == "/" and d.get("percent", 0) > 90:
             alerts_local.append({"alert": f"Low Disk Space on {d.get('mountpoint', d.get('device', 'unknown'))}", "severity": "critical"})
+        # Inode usage can still be for all
         if d.get("inode_percent", 0) and d.get("inode_percent", 0) > 90:
             alerts_local.append({"alert": f"High inode usage on {d.get('mountpoint', d.get('device', 'unknown'))}", "severity": "warning"})
     # Custom alert
@@ -115,14 +117,27 @@ async def receive_metrics(data: dict):
 
 @app.get("/metrics")
 async def get_metrics():
-    return [entries[-1] for entries in metrics_db.values() if entries]
+    # Add sensors_temperature to the returned metrics for each agent
+    result = []
+    for entries in metrics_db.values():
+        if entries:
+            latest = entries[-1]
+            # Ensure sensors_temperature is present (for backward compatibility)
+            if "sensors_temperature" not in latest:
+                latest["sensors_temperature"] = {}
+            result.append(latest)
+    return result
 
 @app.get("/metrics/{agent_id}")
 async def get_metrics_for_agent(agent_id: str):
     entries = metrics_db.get(agent_id)
     if not entries:
         return {}
-    return entries[-1]
+    latest = entries[-1]
+    # Ensure sensors_temperature is present
+    if "sensors_temperature" not in latest:
+        latest["sensors_temperature"] = {}
+    return latest
 
 @app.get("/alerts")
 async def get_alerts():
