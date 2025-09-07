@@ -33,7 +33,7 @@ function Dashboard() {
         }
       } catch (e) {
         console.error("Error fetching data:", e);
-        setLoading(false);
+
       }
     };
     fetchData();
@@ -45,21 +45,26 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (selectedAgent) {
-      const fetchAgentData = async () => {
-        try {
-          const [agentData, histData] = await Promise.all([
-            axios.get(`/api/metrics/${selectedAgent}`),
-            axios.get(`/api/history/${selectedAgent}`)
-          ]);
-          setAgent(agentData.data);
-          setHist(histData.data);
-        } catch (e) {
-          console.error("Error fetching agent data:", e);
-        }
-      };
-      fetchAgentData();
-    }
+    if (!selectedAgent) return;
+    // set current agent from metrics list
+    const found = metrics.find(m => m.agent_id === selectedAgent);
+    if (found) setAgent(found);
+  }, [selectedAgent, metrics]);
+
+  useEffect(() => {
+    if (!selectedAgent) return;
+    let active = true;
+    const fetchHist = async () => {
+      try {
+        const res = await axios.get(`/api/history/${selectedAgent}`);
+        if (active) setHist(res.data);
+      } catch (e) {
+        console.error("History fetch failed", e);
+      }
+    };
+    fetchHist();
+    const interval = setInterval(fetchHist, 5000);
+    return () => { active = false; clearInterval(interval); };
   }, [selectedAgent]);
 
   if (loading) return <CircularProgress />;
@@ -287,7 +292,16 @@ function Dashboard() {
                 <Typography variant="h6" gutterBottom>
                   CPU Usage (Last 2 min)
                 </Typography>
-                {hist && <TimeSeriesChart dataPoints={hist.cpu} label="CPU %" color="rgba(25,118,210,1)" />}
+                {hist && hist.cpu && hist.cpu.length > 0 ? (
+                  <TimeSeriesChart
+                    dataPoints={hist.cpu}
+                    labels={hist.cpu.map((_,i)=>`${i * (hist.interval_sec || 5)}s`)}
+                    label="CPU %"
+                    color="rgba(25,118,210,1)"
+                  />
+                ) : (
+                  <Typography variant="body2" color="text.secondary">Gathering samples...</Typography>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -297,7 +311,16 @@ function Dashboard() {
                 <Typography variant="h6" gutterBottom>
                   Memory Usage (Last 2 min)
                 </Typography>
-                {hist && <TimeSeriesChart dataPoints={hist.mem} label="Memory %" color="rgba(211,47,47,1)" />}
+                {hist && hist.mem && hist.mem.length > 0 ? (
+                  <TimeSeriesChart
+                    dataPoints={hist.mem}
+                    labels={hist.mem.map((_,i)=>`${i * (hist.interval_sec || 5)}s`)}
+                    label="Memory %"
+                    color="rgba(211,47,47,1)"
+                  />
+                ) : (
+                  <Typography variant="body2" color="text.secondary">Gathering samples...</Typography>
+                )}
               </CardContent>
             </Card>
           </Grid>

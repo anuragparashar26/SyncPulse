@@ -12,26 +12,35 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
-export default function TimeSeriesChart({ dataPoints, label='Value', color='rgba(75,192,192,1)', height=90, unit }) {
+export default function TimeSeriesChart({ dataPoints, labels, label='Value', color='rgba(75,192,192,1)', height=90, unit }) {
+  if (!Array.isArray(dataPoints) || dataPoints.length === 0) {
+    return <div style={{ height, display:'flex',alignItems:'center',justifyContent:'center',color:'#888' }}>No data</div>;
+  }
+  const normalized = dataPoints.map(d => {
+    if (typeof d === 'number') return d;
+    if (d && typeof d === 'object') return d.v ?? d.value ?? d.y ?? 0;
+    return 0;
+  });
+  const finalLabels = Array.isArray(labels) && labels.length === normalized.length
+    ? labels
+    : normalized.map((_d,i)=>i+1);
   const data = {
-    labels: dataPoints.map((_d,i)=>i+1), 
-    datasets: [
-      {
-        label: unit ? `${label} (${unit})` : label,
-        data: dataPoints.map(d => d.v),
-        tension: 0.3,
-        borderColor: color,
-        pointRadius: 0,
-        fill: true,
-        backgroundColor: color.replace('1)', '0.15)')
-      }
-    ]
+    labels: finalLabels,
+    datasets: [{
+      label: unit ? `${label} (${unit})` : label,
+      data: normalized,
+      tension: 0.3,
+      borderColor: color,
+      pointRadius: 0,
+      fill: true,
+      backgroundColor: color.replace(/1\)$/, '0.15)')
+    }]
   };
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
-  scales: { x: { ticks: { display:false }, grid: { display: false } }, y: { ticks: { color:'#888' }, grid: { color: 'rgba(0,0,0,0.05)' } } }
+    scales: { x: { ticks: { display:false }, grid: { display: false } }, y: { ticks: { color:'#888' }, grid: { color: 'rgba(0,0,0,0.05)' } } }
   };
   return <div style={{ height }}><Line data={data} options={options} /></div>;
 }

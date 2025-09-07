@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Card, CardContent, Typography, Grid, CircularProgress, MenuItem, Select, InputLabel, FormControl, Chip, Box, LinearProgress, Divider } from "@mui/material";
+import { Card, CardContent, Typography, Grid, CircularProgress, MenuItem, Select, InputLabel, FormControl, Chip, Box, LinearProgress, Divider, Alert, Paper, Stack, IconButton, Tooltip } from "@mui/material";
 import { Line, Pie } from "react-chartjs-2";
+import { Refresh, Computer, Memory, Storage, NetworkCheck, Speed, Settings, Security } from "@mui/icons-material";
 
 import {
   Chart as ChartJS,
@@ -10,12 +11,11 @@ import {
   PointElement,
   LineElement,
   Title,
-  Tooltip,
   Legend,
   ArcElement,
 } from "chart.js";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Legend, ArcElement);
 
 function Metrics() {
   const [metrics, setMetrics] = useState([]);
@@ -64,12 +64,19 @@ function Metrics() {
 
     useEffect(() => {
       if (selectedAgent) {
+        setHist(null); // reset when switching agent
+        let active = true;
         const fetchHistory = () => {
           axios.get(`/api/history/${selectedAgent}`).then(res => {
-            setHist(res.data);
-          }).catch(err => console.error("Error fetching history:", err));
+            if (active) setHist(res.data);
+          }).catch(err => {
+            console.error("Error fetching history:", err);
+            if (active && !hist) setHist({ cpu: [], mem: [] });
+          });
         };
         fetchHistory();
+        const interval = setInterval(fetchHistory, 5000);
+        return () => { active = false; clearInterval(interval); };
       }
     }, [selectedAgent]);
 
@@ -102,336 +109,562 @@ function Metrics() {
   const agent = metrics.find(m => m.agent_id === selectedAgent);
 
   return (
-      <div>
-        <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-          Detailed Metrics
+    <Box sx={{ p: 3 }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+        <Typography variant="h4" fontWeight={700} color="primary">
+          System Metrics Dashboard
         </Typography>
+        <Tooltip title="Refresh Data">
+          <IconButton color="primary" onClick={() => window.location.reload()}>
+            <Refresh />
+          </IconButton>
+        </Tooltip>
+      </Box>
 
-        {renderGpuInfo()}
-
-        {/* Agent Selector */}
-        <FormControl sx={{ minWidth: 200, mb: 3 }}>
-          <InputLabel>Agent</InputLabel>
-          <Select
-            value={selectedAgent}
-            label="Agent"
-            onChange={e => setSelectedAgent(e.target.value)}
-          >
-            {metrics.map(m => (
-              <MenuItem key={m.agent_id} value={m.agent_id}>
-                {m.device || 'Device'} - {m.agent_id.slice(0, 8)}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {agent && (
-          <div>
-            {/* Memory and System Information */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>Memory</Typography>
-                    <Typography variant="h4">{agent.memory.percent.toFixed(1)}%</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {(agent.memory.used / 1024 / 1024 / 1024).toFixed(1)} GB used of {(agent.memory.total / 1024 / 1024 / 1024).toFixed(1)} GB
+      {/* Enhanced Agent Selector */}
+      <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
+        <Box display="flex" alignItems="center" gap={2}>
+          <FormControl sx={{ minWidth: 280 }}>
+            <InputLabel>Select Device</InputLabel>
+            <Select
+              value={selectedAgent}
+              label="Select Device"
+              onChange={e => setSelectedAgent(e.target.value)}
+              sx={{ borderRadius: 2 }}
+            >
+              {metrics.map(m => (
+                <MenuItem key={m.agent_id} value={m.agent_id}>
+                  <Box display="flex" flexDirection="column" alignItems="flex-start">
+                    <Typography variant="body2" fontWeight={600}>
+                      {m.device || 'Device'} - {m.agent_id.slice(0, 8)}
                     </Typography>
-                    <LinearProgress variant="determinate" value={agent.memory.percent} sx={{ mt: 1 }} />
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>Swap</Typography>
-                    <Typography variant="h4">{agent.memory.swap_percent.toFixed(1)}%</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {(agent.memory.swap_used / 1024 / 1024 / 1024).toFixed(1)} GB used of {(agent.memory.swap_total / 1024 / 1024 / 1024).toFixed(1)} GB
+                    <Typography variant="caption" color="text.secondary">
+                      {m.platform} {m.platform_release}
                     </Typography>
-                    <LinearProgress variant="determinate" value={agent.memory.swap_percent} sx={{ mt: 1 }} color="secondary" />
-                  </CardContent>
-                </Card>
-              </Grid>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {agent && (
+            <Chip 
+              icon={<Computer />}
+              label={`${agent.device || 'Device'} Online`} 
+              color="success" 
+              variant="outlined" 
+            />
+          )}
+        </Box>
+      </Paper>
 
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>Uptime</Typography>
-                    <Typography variant="h4">{(agent.uptime_sec / 3600).toFixed(1)}h</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {(agent.uptime_sec / 86400).toFixed(1)} days
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>Load Average</Typography>
-                    <Typography variant="h4">{agent.cpu.load_avg?.[0]?.toFixed(2) || 'N/A'}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      1 min average
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-
-            {/* Time Series Charts */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>CPU Usage (Last 2 min)</Typography>
-                    {hist && hist.cpu ? (
-                      <Line
-                        data={{
-                          labels: hist.cpu.map((_, i) => `${i * 10}s`),
-                          datasets: [{
-                            label: 'CPU %',
-                            data: hist.cpu,
-                            borderColor: 'rgba(25,118,210,1)',
-                            backgroundColor: 'rgba(25,118,210,0.1)',
-                            fill: true,
-                          }]
-                        }}
-                        options={{
-                          responsive: true,
-                          scales: {
-                            y: { beginAtZero: true, max: 100 }
-                          },
-                          plugins: {
-                            legend: { display: false }
-                          }
-                        }}
-                      />
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">Loading chart data...</Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>Memory Usage (Last 2 min)</Typography>
-                    {hist && hist.mem ? (
-                      <Line
-                        data={{
-                          labels: hist.mem.map((_, i) => `${i * 10}s`),
-                          datasets: [{
-                            label: 'Memory %',
-                            data: hist.mem,
-                            borderColor: 'rgba(211,47,47,1)',
-                            backgroundColor: 'rgba(211,47,47,0.1)',
-                            fill: true,
-                          }]
-                        }}
-                        options={{
-                          responsive: true,
-                          scales: {
-                            y: { beginAtZero: true, max: 100 }
-                          },
-                          plugins: {
-                            legend: { display: false }
-                          }
-                        }}
-                      />
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">Loading chart data...</Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-
-            {/* Network Information */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>Network Information</Typography>
-                    {agent.network && agent.network.length > 0 ? (
-                      <Box>
-                        <Typography variant="subtitle1" gutterBottom>
-                          Current Activity
-                        </Typography>
-                        <Box display="flex" justifyContent="space-between" mb={2}>
-                          <Typography variant="body1">Total Receive Rate:</Typography>
-                          <Typography variant="body1" color="success.main" fontWeight="bold">
-                            {(agent.network.reduce((acc, n) => acc + (n.bytes_recv || 0), 0) / 1024 / 1024 * 8).toFixed(2)} Mb/s
-                          </Typography>
-                        </Box>
-                        <Box display="flex" justifyContent="space-between" mb={3}>
-                          <Typography variant="body1">Total Send Rate:</Typography>
-                          <Typography variant="body1" color="secondary.main" fontWeight="bold">
-                            {(agent.network.reduce((acc, n) => acc + (n.bytes_sent || 0), 0) / 1024 / 1024 * 8).toFixed(2)} Mb/s
-                          </Typography>
-                        </Box>
-
-                        <Divider sx={{ my: 2 }} />
-
-                        <Typography variant="subtitle1" gutterBottom>
-                          Network Interfaces ({agent.network.length})
-                        </Typography>
-                        <Grid container spacing={2}>
-                          {agent.network.map((iface, index) => (
-                            <Grid item xs={12} sm={6} md={4} key={index}>
-                              <Card variant="outlined">
-                                <CardContent>
-                                  <Typography variant="subtitle2" color="primary">
-                                    {iface.name || `Interface ${index + 1}`}
-                                  </Typography>
-                                  <Box mt={1}>
-                                    <Typography variant="caption" display="block">
-                                      RX: {(iface.bytes_recv / 1024 / 1024 * 8).toFixed(2)} Mb/s
-                                    </Typography>
-                                    <Typography variant="caption" display="block">
-                                      TX: {(iface.bytes_sent / 1024 / 1024 * 8).toFixed(2)} Mb/s
-                                    </Typography>
-                                  </Box>
-                                </CardContent>
-                              </Card>
-                            </Grid>
-                          ))}
-                        </Grid>
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        No network data available
-                      </Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-
-            {/* Existing CPU and Disk sections */}
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>CPU Usage</Typography>
-                <Typography variant="body2" gutterBottom>Total: {agent.cpu.total_percent.toFixed(1)}% | Cores: {agent.cpu.per_core_percent.length}</Typography>
-                <Box display="flex" flexDirection="column" gap={0.7}>
-                  {agent.cpu.per_core_percent.map((v,i)=> (
-                    <Box key={i} display="flex" alignItems="center" gap={1}>
-                      <Typography variant="caption" sx={{ width:28 }}>C{i}</Typography>
-                      <LinearProgress variant="determinate" value={v} sx={{ flex:1, height:8, borderRadius:4 }} color={v>85?'error': v>60?'warning':'primary'} />
-                      <Typography variant="caption" sx={{ width:38, textAlign:'right' }}>{v.toFixed(0)}%</Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Disks</Typography>
-                <Grid container spacing={2} alignItems="center">
-                  {agent.disks.map(d => (
-                    <Grid item xs={6} sm={4} md={6} key={d.mountpoint}>
-                      <Box>
-                        <Typography variant="caption" sx={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.mountpoint}</Typography>
-                        <Typography variant="caption" display="block">{(d.total / 1024 / 1024 / 1024).toFixed(1)} GB</Typography>
-                        {d.mountpoint === '/' && <Typography variant="caption" display="block">{d.percent.toFixed(1)}% used</Typography>}
-                        {d.mountpoint === '/' && (
-                          <Box sx={{ width: '100px', height: '100px', margin: 'auto', mt: 1, position: 'relative' }}>
-                            <Pie
-                              data={{
-                                labels: ['Used', 'Free'],
-                                datasets: [{
-                                  data: [d.used, d.total - d.used],
-                                  backgroundColor: [d.percent > 90 ? '#d32f2f' : d.percent > 75 ? '#fbc02d' : '#388e3c', '#e0e0e0'],
-                                  borderWidth: 1,
-                                }]
-                              }}
-                              options={{
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                  legend: { display: false },
-                                  tooltip: { enabled: false }
-                                },
-                                cutout: '70%'
-                              }}
-                            />
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                bottom: 0,
-                                right: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexDirection: 'column',
-                              }}
-                            >
-                              <Typography variant="caption" component="div" color="text.secondary">
-                                {`${d.percent.toFixed(0)}%`}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        )}
-                      </Box>
-                    </Grid>
-                  ))}
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-          {agent.gpus && agent.gpus.length>0 && (
-            <Grid item xs={12}>
-              <Card>
+      {agent && (
+        <Box>
+          {/* Enhanced System Overview Cards */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} md={3}>
+              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
                 <CardContent>
-                  <Typography variant="h6">GPUs</Typography>
-                  <Grid container spacing={2}>
-                    {agent.gpus.map((g,i)=>(
-                      <Grid key={i} item xs={12} md={3}>
-                        <Typography variant="subtitle2">{g.name}</Typography>
-                        {'load' in g && <Typography variant="caption">Load: {g.load || g.utilization || 0}%</Typography>}
-                        {'temperature_C' in g && <Typography variant="caption" display="block">Temp: {g.temperature_C}°C</Typography>}
-                      </Grid>
-                    ))}
-                  </Grid>
+                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                    <Memory />
+                    <Typography variant="h3" fontWeight={700}>
+                      {agent.memory.percent.toFixed(1)}%
+                    </Typography>
+                  </Box>
+                  <Typography variant="h6" gutterBottom>Memory Usage</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    {(agent.memory.used / 1024 / 1024 / 1024).toFixed(1)} GB of {(agent.memory.total / 1024 / 1024 / 1024).toFixed(1)} GB
+                  </Typography>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={agent.memory.percent} 
+                    sx={{ 
+                      mt: 2, 
+                      height: 8, 
+                      borderRadius: 4,
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      '& .MuiLinearProgress-bar': { backgroundColor: 'white' }
+                    }} 
+                  />
                 </CardContent>
               </Card>
             </Grid>
-          )}
-      <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-        <Typography variant="h6">Processes (Top 15)</Typography>
-        {agent.processes.map(p => (
-                  <Box key={p.pid} display="flex" justifyContent="space-between" mb={0.5}>
-                    <Typography variant="body2" sx={{ maxWidth:140, overflow:'hidden', textOverflow:'ellipsis' }}>{p.name}</Typography>
-                    <Chip size="small" label={`${p.cpu.toFixed(1)}%`} color={p.cpu>50?'error':'default'} />
-                    <Chip size="small" label={`${p.memory.toFixed(1)}% mem`} />
+
+            <Grid item xs={12} md={3}>
+              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                    <Storage />
+                    <Typography variant="h3" fontWeight={700}>
+                      {agent.memory.swap_percent.toFixed(1)}%
+                    </Typography>
                   </Box>
-                ))}
-              </CardContent>
-            </Card>
+                  <Typography variant="h6" gutterBottom>Swap Usage</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    {(agent.memory.swap_used / 1024 / 1024 / 1024).toFixed(1)} GB of {(agent.memory.swap_total / 1024 / 1024 / 1024).toFixed(1)} GB
+                  </Typography>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={agent.memory.swap_percent} 
+                    sx={{ 
+                      mt: 2, 
+                      height: 8, 
+                      borderRadius: 4,
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      '& .MuiLinearProgress-bar': { backgroundColor: 'white' }
+                    }} 
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={3}>
+              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                    <Speed />
+                    <Typography variant="h3" fontWeight={700}>
+                      {(agent.uptime_sec / 3600).toFixed(1)}h
+                    </Typography>
+                  </Box>
+                  <Typography variant="h6" gutterBottom>System Uptime</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    {(agent.uptime_sec / 86400).toFixed(1)} days running
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={3}>
+              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                    <Computer />
+                    <Typography variant="h3" fontWeight={700}>
+                      {agent.cpu.load_avg?.[0]?.toFixed(2) || 'N/A'}
+                    </Typography>
+                  </Box>
+                  <Typography variant="h6" gutterBottom>Load Average</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    1 minute average
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6">Critical / Zombie</Typography>
-                <Typography variant="body2">Zombie Processes: <b style={{ color: agent.zombie_processes>0?'#d32f2f':'inherit' }}>{agent.zombie_processes}</b></Typography>
-                {agent.critical_processes && Object.entries(agent.critical_processes).map(([proc, running]) => (
-                  <Typography key={proc} variant="body2" color={running? 'text.primary':'error'}>{proc}: {running? 'OK':'DOWN'}</Typography>
-                ))}
-              </CardContent>
-            </Card>
+
+          {/* Enhanced Time Series Charts */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+                <Box sx={{ bgcolor: 'primary.main', color: 'white', p: 2 }}>
+                  <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Computer />
+                    CPU Usage Trend
+                  </Typography>
+                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                    Last 2 minutes
+                  </Typography>
+                </Box>
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ height: 280 }}>
+                    {hist && hist.cpu && hist.cpu.length > 0 ? (
+                      <Line
+                        data={{
+                          labels: hist.cpu.map((_, i) => `${i * (hist.interval_sec || 5)}s`),
+                          datasets: [{
+                            label: 'CPU %',
+                            data: hist.cpu,
+                            borderColor: '#1976d2',
+                            backgroundColor: 'rgba(25,118,210,0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                          }]
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          scales: {
+                            y: { 
+                              beginAtZero: true, 
+                              max: 100,
+                              grid: { color: 'rgba(0,0,0,0.1)' },
+                              ticks: { color: '#666' }
+                            },
+                            x: { 
+                              grid: { display: false },
+                              ticks: { color: '#666' }
+                            }
+                          },
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                              backgroundColor: 'rgba(0,0,0,0.8)',
+                              borderColor: '#1976d2',
+                              borderWidth: 1,
+                            }
+                          }
+                        }}
+                      />
+                    ) : (
+                      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100%">
+                        <CircularProgress sx={{ mb: 2 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          Loading chart data...
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </CardContent>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+                <Box sx={{ bgcolor: 'error.main', color: 'white', p: 2 }}>
+                  <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Memory />
+                    Memory Usage Trend
+                  </Typography>
+                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                    Last 2 minutes
+                  </Typography>
+                </Box>
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ height: 280 }}>
+                    {hist && hist.mem && hist.mem.length > 0 ? (
+                      <Line
+                        data={{
+                          labels: hist.mem.map((_, i) => `${i * (hist.interval_sec || 5)}s`),
+                          datasets: [{
+                            label: 'Memory %',
+                            data: hist.mem,
+                            borderColor: '#d32f2f',
+                            backgroundColor: 'rgba(211,47,47,0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                          }]
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          scales: {
+                            y: { 
+                              beginAtZero: true, 
+                              max: 100,
+                              grid: { color: 'rgba(0,0,0,0.1)' },
+                              ticks: { color: '#666' }
+                            },
+                            x: { 
+                              grid: { display: false },
+                              ticks: { color: '#666' }
+                            }
+                          },
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                              backgroundColor: 'rgba(0,0,0,0.8)',
+                              borderColor: '#d32f2f',
+                              borderWidth: 1,
+                            }
+                          }
+                        }}
+                      />
+                    ) : (
+                      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100%">
+                        <CircularProgress sx={{ mb: 2 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          Loading chart data...
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </CardContent>
+              </Paper>
+            </Grid>
           </Grid>
-        </div>
+
+
+          {renderGpuInfo()}
+          
+          {/* Enhanced Network Information */}
+          <Paper elevation={2} sx={{ mb: 4, borderRadius: 3, overflow: 'hidden' }}>
+            <Box sx={{ bgcolor: 'success.main', color: 'white', p: 2 }}>
+              <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <NetworkCheck />
+                Network Activity
+              </Typography>
+            </Box>
+            <CardContent sx={{ p: 3 }}>
+              {agent.network && agent.network.length > 0 ? (
+                <Box>
+                  <Grid container spacing={3} sx={{ mb: 3 }}>
+                    <Grid item xs={12} md={6}>
+                      <Card variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'success.main' }}>
+                        <Typography variant="h4" color="success.main" fontWeight={700}>
+                          {(agent.network.reduce((acc, n) => acc + (n.bytes_recv || 0), 0) / 1024 / 1024 * 8).toFixed(2)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Mb/s Download
+                        </Typography>
+                      </Card>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Card variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'warning.main' }}>
+                        <Typography variant="h4" color="warning.main" fontWeight={700}>
+                          {(agent.network.reduce((acc, n) => acc + (n.bytes_sent || 0), 0) / 1024 / 1024 * 8).toFixed(2)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Mb/s Upload
+                        </Typography>
+                      </Card>
+                    </Grid>
+                  </Grid>
+
+                  <Divider sx={{ my: 3 }} />
+
+                  <Typography variant="subtitle1" gutterBottom fontWeight={600}>
+                    Network Interfaces ({agent.network.length})
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {agent.network.map((iface, index) => (
+                      <Grid item xs={12} sm={6} md={4} key={index}>
+                        <Card variant="outlined" sx={{ height: '100%', transition: 'all 0.2s', '&:hover': { boxShadow: 3 } }}>
+                          <CardContent>
+                            <Typography variant="subtitle2" color="primary" fontWeight={600}>
+                              {iface.interface || `Interface ${index + 1}`}
+                            </Typography>
+                            <Stack spacing={1} mt={1}>
+                              <Box display="flex" justifyContent="space-between">
+                                <Typography variant="caption" color="text.secondary">Download:</Typography>
+                                <Chip size="small" label={`${(iface.bytes_recv / 1024 / 1024 * 8).toFixed(2)} Mb/s`} color="success" />
+                              </Box>
+                              <Box display="flex" justifyContent="space-between">
+                                <Typography variant="caption" color="text.secondary">Upload:</Typography>
+                                <Chip size="small" label={`${(iface.bytes_sent / 1024 / 1024 * 8).toFixed(2)} Mb/s`} color="warning" />
+                              </Box>
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              ) : (
+                <Alert severity="info" sx={{ borderRadius: 2 }}>
+                  No network data available for this device.
+                </Alert>
+              )}
+            </CardContent>
+          </Paper>
+
+          {/* Enhanced CPU and Storage Section */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden' }}>
+                <Box sx={{ bgcolor: 'info.main', color: 'white', p: 2 }}>
+                  <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Computer />
+                    CPU Core Usage
+                  </Typography>
+                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                    Total: {agent.cpu.total_percent.toFixed(1)}% | Cores: {agent.cpu.per_core_percent.length}
+                  </Typography>
+                </Box>
+                <CardContent sx={{ p: 3 }}>
+                  <Stack spacing={1.5}>
+                    {agent.cpu.per_core_percent.map((v, i) => (
+                      <Box key={i} display="flex" alignItems="center" gap={2}>
+                        <Typography variant="caption" sx={{ minWidth: 40, fontWeight: 600 }}>
+                          Core {i}
+                        </Typography>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={v} 
+                          sx={{ 
+                            flex: 1, 
+                            height: 12, 
+                            borderRadius: 6,
+                            backgroundColor: 'rgba(0,0,0,0.1)'
+                          }} 
+                          color={v > 85 ? 'error' : v > 60 ? 'warning' : 'primary'} 
+                        />
+                        <Typography variant="caption" sx={{ minWidth: 45, textAlign: 'right', fontWeight: 600 }}>
+                          {v.toFixed(0)}%
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </CardContent>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden' }}>
+                <Box sx={{ bgcolor: 'secondary.main', color: 'white', p: 2 }}>
+                  <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Storage />
+                    Storage Usage
+                  </Typography>
+                </Box>
+                <CardContent sx={{ p: 3 }}>
+                  {agent.disks.filter(d => d.mountpoint === '/').map(d => (
+                    <Box key={d.mountpoint} textAlign="center">
+                      <Typography variant="subtitle1" fontWeight={600} mb={2}>
+                        Root Filesystem ({d.mountpoint})
+                      </Typography>
+                      <Typography variant="h4" color="secondary.main" fontWeight={700} mb={1}>
+                        {d.percent.toFixed(1)}%
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" mb={3}>
+                        {(d.used / 1024 / 1024 / 1024).toFixed(1)} GB of {(d.total / 1024 / 1024 / 1024).toFixed(1)} GB used
+                      </Typography>
+                      <Box sx={{ width: 200, height: 200, margin: 'auto', position: 'relative' }}>
+                        <Pie
+                          data={{
+                            labels: ['Used', 'Free'],
+                            datasets: [{
+                              data: [d.used, d.total - d.used],
+                              backgroundColor: [
+                                d.percent > 90 ? '#d32f2f' : d.percent > 75 ? '#ed6c02' : '#2e7d32', 
+                                '#e0e0e0'
+                              ],
+                              borderWidth: 0,
+                            }]
+                          }}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: { 
+                                position: 'bottom',
+                                labels: { 
+                                  usePointStyle: true,
+                                  padding: 20
+                                }
+                              },
+                              tooltip: { 
+                                callbacks: {
+                                  label: (context) => {
+                                    const label = context.label;
+                                    const value = (context.raw / 1024 / 1024 / 1024).toFixed(1);
+                                    return `${label}: ${value} GB`;
+                                  }
+                                }
+                              }
+                            },
+                            cutout: '60%'
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  ))}
+                </CardContent>
+              </Paper>
+            </Grid>
+          </Grid>
+
+          {/* Enhanced Process Information */}
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden' }}>
+                <Box sx={{ bgcolor: 'warning.main', color: 'white', p: 2 }}>
+                  <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Settings />
+                    Top Processes
+                  </Typography>
+                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                    Highest resource usage
+                  </Typography>
+                </Box>
+                <CardContent sx={{ p: 2 }}>
+                  <Stack spacing={1}>
+                    {agent.processes.slice(0, 10).map(p => (
+                      <Card key={p.pid} variant="outlined" sx={{ p: 1.5 }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" fontWeight={600} noWrap>
+                              {p.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              PID: {p.pid}
+                            </Typography>
+                          </Box>
+                          <Box display="flex" gap={1}>
+                            <Chip 
+                              size="small" 
+                              label={`${p.cpu.toFixed(1)}%`} 
+                              color={p.cpu > 50 ? 'error' : p.cpu > 20 ? 'warning' : 'default'}
+                              sx={{ minWidth: 60 }}
+                            />
+                            <Chip 
+                              size="small" 
+                              label={`${p.memory.toFixed(1)}%`} 
+                              variant="outlined"
+                              sx={{ minWidth: 60 }}
+                            />
+                          </Box>
+                        </Box>
+                      </Card>
+                    ))}
+                  </Stack>
+                </CardContent>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Paper elevation={2} sx={{ height: '100%', borderRadius: 3, overflow: 'hidden' }}>
+                <Box sx={{ bgcolor: 'error.main', color: 'white', p: 2 }}>
+                  <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Security />
+                    System Health
+                  </Typography>
+                </Box>
+                <CardContent sx={{ p: 3 }}>
+                  <Stack spacing={3}>
+                    <Box>
+                      <Typography variant="subtitle2" gutterBottom>Zombie Processes</Typography>
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Typography variant="body2">Count:</Typography>
+                        <Chip 
+                          label={agent.zombie_processes} 
+                          color={agent.zombie_processes > 0 ? 'error' : 'success'}
+                          size="small"
+                        />
+                      </Box>
+                    </Box>
+                    
+                    <Divider />
+                    
+                    <Box>
+                      <Typography variant="subtitle2" gutterBottom>Critical Services</Typography>
+                      <Stack spacing={1}>
+                        {agent.critical_processes && Object.entries(agent.critical_processes).map(([proc, running]) => (
+                          <Box key={proc} display="flex" justifyContent="space-between" alignItems="center">
+                            <Typography variant="body2">{proc}:</Typography>
+                            <Chip 
+                              label={running ? 'Running' : 'Stopped'} 
+                              color={running ? 'success' : 'error'}
+                              size="small"
+                              variant={running ? 'outlined' : 'filled'}
+                            />
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }
 
