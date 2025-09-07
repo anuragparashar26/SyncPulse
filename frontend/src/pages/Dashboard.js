@@ -13,18 +13,21 @@ function Dashboard() {
   const [selectedAgent, setSelectedAgent] = useState('');
   const [agent, setAgent] = useState(null);
   const [hist, setHist] = useState(null);
+  const [overview, setOverview] = useState(null);
 
   useEffect(() => {
     let mounted = true;
     const fetchData = async () => {
       try {
-        const [h, m] = await Promise.all([
+        const [h, m, o] = await Promise.all([
           axios.get("/api/health"),
-          axios.get("/api/metrics")
+          axios.get("/api/metrics"),
+          axios.get("/api/overview")
         ]);
         if (mounted) {
           setHealth(h.data);
           setMetrics(m.data);
+          setOverview(o.data);
           setLoading(false);
 
           if (!selectedAgent && m.data.length > 0) {
@@ -135,7 +138,7 @@ function Dashboard() {
               icon={<Computer />}
               label={`${agent.device || 'Device'} Online`} 
               color="success" 
-              variant="outlined" 
+              variant="outlined"
             />
           )}
         </Box>
@@ -146,7 +149,7 @@ function Dashboard() {
         {health && (
           <>
             <Grid item xs={12} md={4}>
-              <Card sx={{ height: '100%' }}>
+              <Card sx={{ height: '100%', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" mb={2}>
                     {getStatusIcon(health.status)}
@@ -154,7 +157,7 @@ function Dashboard() {
                       System Status
                     </Typography>
                   </Box>
-                  <Typography variant="h4" color={`${getStatusColor(health.status)}.main`} sx={{ mb: 1 }}>
+                  <Typography variant="h4" color="primary" sx={{ mb: 1 }}>
                     {health.status?.toUpperCase()}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -165,12 +168,12 @@ function Dashboard() {
             </Grid>
 
             <Grid item xs={12} md={4}>
-              <Card sx={{ height: '100%' }}>
+              <Card sx={{ height: '100%', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     Devices Reporting
                   </Typography>
-                  <Typography variant="h3" color="primary.main">
+                  <Typography variant="h3" color="primary">
                     {health.devices_reporting || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -181,12 +184,12 @@ function Dashboard() {
             </Grid>
 
             <Grid item xs={12} md={4}>
-              <Card sx={{ height: '100%' }}>
+              <Card sx={{ height: '100%', backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     Active Alerts
                   </Typography>
-                  <Typography variant="h3" color={health.total_alerts > 0 ? 'error.main' : 'success.main'}>
+                  <Typography variant="h3" color={health.total_alerts > 0 ? 'secondary' : 'primary'}>
                     {health.total_alerts || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -202,17 +205,17 @@ function Dashboard() {
       {/* Quick Actions */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12}>
-          <Card>
+          <Card sx={{ backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Quick Actions
               </Typography>
               <Box display="flex" gap={2} flexWrap="wrap">
                 <Button
-                  variant="contained"
+                  variant="outlined"
                   component={Link}
                   to="/metrics"
-                  startIcon={<Assessment />}
+                  sx={{ borderColor: '#888', color: 'primary' }}
                 >
                   View Detailed Metrics
                 </Button>
@@ -220,8 +223,7 @@ function Dashboard() {
                   variant="outlined"
                   component={Link}
                   to="/alerts"
-                  startIcon={<Notifications />}
-                  color={health?.total_alerts > 0 ? 'error' : 'primary'}
+                  sx={{ borderColor: '#888', color: health?.total_alerts > 0 ? 'secondary' : 'primary' }}
                 >
                   View Alerts ({health?.total_alerts || 0})
                 </Button>
@@ -231,38 +233,36 @@ function Dashboard() {
         </Grid>
       </Grid>
 
-      {/* Device Summary */}
-      {metrics.length > 0 && (
+      {/* Server Overview */}
+      {overview && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12}>
-            <Card>
+            <Card sx={{ backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Device Summary
+                  Server Overview
                 </Typography>
                 <Grid container spacing={2}>
-                  {metrics.slice(0, 6).map((device) => (
-                    <Grid item xs={12} sm={6} md={4} key={device.agent_id}>
-                      <Card variant="outlined" sx={{ height: '100%' }}>
-                        <CardContent>
-                          <Typography variant="subtitle1" gutterBottom>
-                            {device.device || 'Device'} - {device.agent_id.slice(0, 8)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Platform: {device.platform} {device.platform_release}
-                          </Typography>
-                          <Box mt={1}>
-                            <Typography variant="caption" display="block">
-                              CPU: {device.cpu?.total_percent?.toFixed(1) || 'N/A'}%
-                            </Typography>
-                            <Typography variant="caption" display="block">
-                              Memory: {device.memory?.percent?.toFixed(1) || 'N/A'}%
-                            </Typography>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography variant="body2" color="text.secondary">Hostname</Typography>
+                    <Typography>{overview.hostname}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography variant="body2" color="text.secondary">Operating System</Typography>
+                    <Typography>{overview.os_name} {overview.os_version}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography variant="body2" color="text.secondary">CPU</Typography>
+                    <Typography>{overview.cpu}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography variant="body2" color="text.secondary">GPU</Typography>
+                    <Typography>{overview.gpu || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Typography variant="body2" color="text.secondary">RAM</Typography>
+                    <Typography>{overview.ram}</Typography>
+                  </Grid>
                 </Grid>
               </CardContent>
             </Card>

@@ -8,14 +8,20 @@ import Alerts from "./pages/Alerts";
 
 const theme = createTheme({
   palette: {
+    mode: 'dark',
     primary: {
-      main: '#1976d2',
+      main: '#ffffff',
     },
     secondary: {
-      main: '#dc004e',
+      main: '#888888',
     },
     background: {
-      default: '#f5f5f5',
+      default: '#121212',
+      paper: '#1e1e1e',
+    },
+    text: {
+      primary: '#ffffff',
+      secondary: '#cccccc',
     },
   },
   typography: {
