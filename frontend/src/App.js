@@ -19,6 +19,15 @@ const theme = createTheme({
     },
   },
   typography: {
+    fontFamily: [
+      'Fira Mono',
+      'JetBrains Mono',
+      'Source Code Pro',
+      'Menlo',
+      'Monaco',
+      'Consolas',
+      'monospace'
+    ].join(','),
     h6: {
       fontWeight: 600,
     },

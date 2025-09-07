@@ -134,46 +134,48 @@ function Metrics() {
         </Tooltip>
       </Box>
 
-      {/* Enhanced Agent Selector */}
-      <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-        <Box display="flex" alignItems="center" gap={2}>
-          <FormControl sx={{ minWidth: 280 }}>
-            <InputLabel>Select Device</InputLabel>
-            <Select
-              value={selectedAgent}
-              label="Select Device"
-              onChange={e => setSelectedAgent(e.target.value)}
-              sx={{ borderRadius: 2 }}
-            >
-              {metrics.map(m => (
-                <MenuItem key={m.agent_id} value={m.agent_id}>
-                  <Box display="flex" flexDirection="column" alignItems="flex-start">
-                    <Typography variant="body2" fontWeight={600}>
-                      {m.device || 'Device'} - {m.agent_id.slice(0, 8)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {m.platform} {m.platform_release}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          {agent && (
-            <Chip 
-              icon={<Computer />}
-              label={`${agent.device || 'Device'} Online`} 
-              color="success" 
-              variant="outlined" 
-            />
-          )}
-        </Box>
-      </Paper>
+      
 
       {agent && (
         <Box>
           {/* Enhanced System Overview Cards */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
+            {/* CPU Usage card first, with bar */}
+            <Grid item xs={12} md={3}>
+              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                    <Computer />
+                    <Typography variant="h3" fontWeight={700}>
+                      {agent.cpu.total_percent.toFixed(1)}%
+                    </Typography>
+                  </Box>
+                  <Typography variant="h6" gutterBottom>CPU Usage</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Total CPU utilization
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={agent.cpu.total_percent}
+                    sx={{
+                      mt: 2,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      '& .MuiLinearProgress-bar': { backgroundColor: 'white' }
+                    }}
+                    color={
+                      agent.cpu.total_percent > 90
+                        ? 'error'
+                        : agent.cpu.total_percent > 75
+                        ? 'warning'
+                        : 'success'
+                    }
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+            {/* Memory Usage card */}
             <Grid item xs={12} md={3}>
               <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
                 <CardContent>
@@ -201,7 +203,7 @@ function Metrics() {
                 </CardContent>
               </Card>
             </Grid>
-
+            {/* Swap Usage card */}
             <Grid item xs={12} md={3}>
               <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
                 <CardContent>
@@ -229,7 +231,7 @@ function Metrics() {
                 </CardContent>
               </Card>
             </Grid>
-
+            {/* System Uptime card */}
             <Grid item xs={12} md={3}>
               <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
                 <CardContent>
@@ -242,23 +244,6 @@ function Metrics() {
                   <Typography variant="h6" gutterBottom>System Uptime</Typography>
                   <Typography variant="body2" sx={{ opacity: 0.9 }}>
                     {(agent.uptime_sec / 86400).toFixed(1)} days running
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} md={3}>
-              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white' }}>
-                <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                    <Computer />
-                    <Typography variant="h3" fontWeight={700}>
-                      {agent.cpu.load_avg?.[0]?.toFixed(2) || 'N/A'}
-                    </Typography>
-                  </Box>
-                  <Typography variant="h6" gutterBottom>Load Average</Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    1 minute average
                   </Typography>
                 </CardContent>
               </Card>
@@ -475,6 +460,50 @@ function Metrics() {
               )}
             </CardContent>
           </Paper>
+
+          {/* Temperature Sensors */}
+          {agent.sensors_temperature && Object.keys(agent.sensors_temperature).length > 0 && (
+            <Paper elevation={2} sx={{ mb: 4, borderRadius: 3, overflow: 'hidden' }}>
+              <Box sx={{ bgcolor: 'warning.main', color: 'white', p: 2 }}>
+                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Settings />
+                  Temperature Sensors
+                </Typography>
+              </Box>
+              <CardContent sx={{ p: 3 }}>
+                <Grid container spacing={2}>
+                  {Object.entries(agent.sensors_temperature).map(([group, sensors]) => (
+                    <Grid item xs={12} md={6} key={group}>
+                      <Card variant="outlined" sx={{ height: '100%' }}>
+                        <CardContent>
+                          <Typography variant="subtitle1" fontWeight={600} mb={2}>
+                            {group}
+                          </Typography>
+                          <Stack spacing={1}>
+                            {sensors.map((sensor, idx) => (
+                              <Box key={idx} display="flex" justifyContent="space-between" alignItems="center">
+                                <Typography variant="body2" color="text.secondary">
+                                  {sensor.label || `Sensor ${idx + 1}`}
+                                </Typography>
+                                <Box display="flex" alignItems="center" gap={1}>
+                                  <Typography variant="body2" fontWeight={600}>
+                                    {sensor.current ? `${sensor.current}°C` : 'N/A'}
+                                  </Typography>
+                                  {sensor.high && sensor.current && sensor.current >= sensor.high && (
+                                    <Chip size="small" label="High" color="error" />
+                                  )}
+                                </Box>
+                              </Box>
+                            ))}
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Paper>
+          )}
 
           {/* Enhanced CPU and Storage Section */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
