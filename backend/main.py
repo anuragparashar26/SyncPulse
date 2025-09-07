@@ -117,6 +117,13 @@ async def receive_metrics(data: dict):
 async def get_metrics():
     return [entries[-1] for entries in metrics_db.values() if entries]
 
+@app.get("/metrics/{agent_id}")
+async def get_metrics_for_agent(agent_id: str):
+    entries = metrics_db.get(agent_id)
+    if not entries:
+        return {}
+    return entries[-1]
+
 @app.get("/alerts")
 async def get_alerts():
     return alerts[-20:]
@@ -151,3 +158,51 @@ async def get_gpu_info():
     except Exception:
         pass
     return {"gpus": gpus}
+
+@app.get("/history/{agent_id}")
+async def get_history(agent_id: str, samples: int = 24):
+    """
+    Return exactly `samples` historical points (CPU & Memory).
+    Returns fixed-size arrays, padding with the first available value or zero.
+    """
+    if agent_id not in metrics_db:
+        return {"cpu": [0] * samples, "mem": [0] * samples, "interval_sec": 5}
+    
+    entries = metrics_db[agent_id]
+    
+    # Estimate interval from timestamps
+    interval = 5  # default
+    if len(entries) > 1:
+        timestamps = [e.get("timestamp", 0) for e in entries if "timestamp" in e]
+        if len(timestamps) > 1:
+            diffs = [timestamps[i] - timestamps[i-1] for i in range(1, len(timestamps))]
+            diffs = [d for d in diffs if 0 < d < 120]  # reasonable interval range
+            if diffs:
+                interval = max(1, min(int(round(sum(diffs) / len(diffs))), 60))
+    
+    # Extract CPU and memory data from available entries
+    cpu_data = []
+    mem_data = []
+    for e in entries:  # process all entries, we'll slice later
+        cpu_val = 0
+        mem_val = 0
+        if "cpu" in e and isinstance(e["cpu"], dict):
+            cpu_val = e["cpu"].get("total_percent", 0)
+        if "memory" in e and isinstance(e["memory"], dict):
+            mem_val = e["memory"].get("percent", 0)
+        cpu_data.append(cpu_val)
+        mem_data.append(mem_val)
+    
+    # Take the last 'samples' entries or pad if we have fewer
+    if len(cpu_data) >= samples:
+        cpu_result = cpu_data[-samples:]
+        mem_result = mem_data[-samples:]
+    else:
+        # Pad with first value or zero to reach 'samples' length
+        pad_value_cpu = cpu_data[0] if cpu_data else 0
+        pad_value_mem = mem_data[0] if mem_data else 0
+        padding_needed = samples - len(cpu_data)
+        cpu_result = [pad_value_cpu] * padding_needed + cpu_data
+        mem_result = [pad_value_mem] * padding_needed + mem_data
+    
+    return {"cpu": cpu_result, "mem": mem_result, "interval_sec": interval}

@@ -64,12 +64,19 @@ function Metrics() {
 
     useEffect(() => {
       if (selectedAgent) {
+        setHist(null); // reset when switching agent
+        let active = true;
         const fetchHistory = () => {
           axios.get(`/api/history/${selectedAgent}`).then(res => {
-            setHist(res.data);
-          }).catch(err => console.error("Error fetching history:", err));
+            if (active) setHist(res.data);
+          }).catch(err => {
+            console.error("Error fetching history:", err);
+            if (active && !hist) setHist({ cpu: [], mem: [] });
+          });
         };
         fetchHistory();
+        const interval = setInterval(fetchHistory, 5000);
+        return () => { active = false; clearInterval(interval); };
       }
     }, [selectedAgent]);
 
@@ -186,31 +193,36 @@ function Metrics() {
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>CPU Usage (Last 2 min)</Typography>
-                    {hist && hist.cpu ? (
-                      <Line
-                        data={{
-                          labels: hist.cpu.map((_, i) => `${i * 10}s`),
-                          datasets: [{
-                            label: 'CPU %',
-                            data: hist.cpu,
-                            borderColor: 'rgba(25,118,210,1)',
-                            backgroundColor: 'rgba(25,118,210,0.1)',
-                            fill: true,
-                          }]
-                        }}
-                        options={{
-                          responsive: true,
-                          scales: {
-                            y: { beginAtZero: true, max: 100 }
-                          },
-                          plugins: {
-                            legend: { display: false }
-                          }
-                        }}
-                      />
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">Loading chart data...</Typography>
-                    )}
+                    <Box sx={{ height: 250 }}>
+                      {hist && hist.cpu && hist.cpu.length > 0 ? (
+                        <Line
+                          data={{
+                            labels: hist.cpu.map((_, i) => `${i * (hist.interval_sec || 5)}s`),
+                            datasets: [{
+                              label: 'CPU %',
+                              data: hist.cpu,
+                              borderColor: 'rgba(25,118,210,1)',
+                              backgroundColor: 'rgba(25,118,210,0.1)',
+                              fill: true,
+                            }]
+                          }}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                              y: { beginAtZero: true, max: 100 }
+                            },
+                            plugins: {
+                              legend: { display: false }
+                            }
+                          }}
+                        />
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          Waiting for data...
+                        </Typography>
+                      )}
+                    </Box>
                   </CardContent>
                 </Card>
               </Grid>
@@ -219,31 +231,36 @@ function Metrics() {
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>Memory Usage (Last 2 min)</Typography>
-                    {hist && hist.mem ? (
-                      <Line
-                        data={{
-                          labels: hist.mem.map((_, i) => `${i * 10}s`),
-                          datasets: [{
-                            label: 'Memory %',
-                            data: hist.mem,
-                            borderColor: 'rgba(211,47,47,1)',
-                            backgroundColor: 'rgba(211,47,47,0.1)',
-                            fill: true,
-                          }]
-                        }}
-                        options={{
-                          responsive: true,
-                          scales: {
-                            y: { beginAtZero: true, max: 100 }
-                          },
-                          plugins: {
-                            legend: { display: false }
-                          }
-                        }}
-                      />
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">Loading chart data...</Typography>
-                    )}
+                    <Box sx={{ height: 250 }}>
+                      {hist && hist.mem && hist.mem.length > 0 ? (
+                        <Line
+                          data={{
+                            labels: hist.mem.map((_, i) => `${i * (hist.interval_sec || 5)}s`),
+                            datasets: [{
+                              label: 'Memory %',
+                              data: hist.mem,
+                              borderColor: 'rgba(211,47,47,1)',
+                              backgroundColor: 'rgba(211,47,47,0.1)',
+                              fill: true,
+                            }]
+                          }}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                              y: { beginAtZero: true, max: 100 }
+                            },
+                            plugins: {
+                              legend: { display: false }
+                            }
+                          }}
+                        />
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          Waiting for data...
+                        </Typography>
+                      )}
+                    </Box>
                   </CardContent>
                 </Card>
               </Grid>
@@ -333,13 +350,14 @@ function Metrics() {
               <CardContent>
                 <Typography variant="h6" gutterBottom>Disks</Typography>
                 <Grid container spacing={2} alignItems="center">
-                  {agent.disks.map(d => (
-                    <Grid item xs={6} sm={4} md={6} key={d.mountpoint}>
-                      <Box>
-                        <Typography variant="caption" sx={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.mountpoint}</Typography>
-                        <Typography variant="caption" display="block">{(d.total / 1024 / 1024 / 1024).toFixed(1)} GB</Typography>
-                        {d.mountpoint === '/' && <Typography variant="caption" display="block">{d.percent.toFixed(1)}% used</Typography>}
-                        {d.mountpoint === '/' && (
+                  {agent.disks
+                    .filter(d => d.mountpoint === '/')
+                    .map(d => (
+                      <Grid item xs={6} sm={4} md={6} key={d.mountpoint}>
+                        <Box>
+                          <Typography variant="caption" sx={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.mountpoint}</Typography>
+                          <Typography variant="caption" display="block">{(d.total / 1024 / 1024 / 1024).toFixed(1)} GB</Typography>
+                          <Typography variant="caption" display="block">{d.percent.toFixed(1)}% used</Typography>
                           <Box sx={{ width: '100px', height: '100px', margin: 'auto', mt: 1, position: 'relative' }}>
                             <Pie
                               data={{
@@ -378,9 +396,8 @@ function Metrics() {
                               </Typography>
                             </Box>
                           </Box>
-                        )}
-                      </Box>
-                    </Grid>
+                        </Box>
+                      </Grid>
                   ))}
                 </Grid>
               </CardContent>
