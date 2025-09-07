@@ -1,14 +1,5 @@
 # ProjectX Monitoring – Technical Documentation
 
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009485?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/Frontend-React-149ECA?logo=react&logoColor=white)](https://react.dev/)
-[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Node](https://img.shields.io/badge/Node-16+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/License-Private-informational)](#)
-[![OS](https://img.shields.io/badge/OS-Linux-inactive?logo=linux&logoColor=white)](#)
-
-Version: 1.0
-
 > Purpose: Real‑time visibility into system health (CPU, memory, disks, network, sensors, processes), GPUs, and core service reachability across hosts.
 
 ---
