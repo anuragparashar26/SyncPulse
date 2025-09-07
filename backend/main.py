@@ -336,3 +336,25 @@ async def services():
         "sshd": sshd,
         "essentials": essentials,
     }
+
+@app.get("/all")
+async def get_all(agent_id: Optional[str] = None, samples: int = 24):
+    """
+    Aggregate endpoint returning health, latest metrics, overview, GPU info,
+    services status, and (optionally) history for a specific agent.
+    """
+    health_data = await health()
+    metrics_latest = await get_metrics()
+    overview_data = await get_overview()
+    gpu_data = await get_gpu_info()
+    services_data = await services()
+    history_data = await get_history(agent_id, samples) if agent_id else None
+
+    return {
+        "health": health_data,
+        "metrics": metrics_latest,
+        "overview": overview_data,
+        "gpu": gpu_data,
+        "services": services_data,
+        "history": history_data,
+    }
