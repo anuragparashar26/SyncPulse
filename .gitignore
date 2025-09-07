@@ -22,3 +22,7 @@ agent/agent_id.txt
 
 # (Optional) Ignore backup files
 *~
+
+myenv
+frontend/node_modules
+frontend/build
