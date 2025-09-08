@@ -26,6 +26,15 @@ function Metrics() {
   const [hist, setHist] = useState(null);
   const [services, setServices] = useState(null);
 
+  // Classify interface name → loopback | wifi | ethernet | other
+  const classifyInterface = (name) => {
+    const n = String(name || "").toLowerCase();
+    if (n === "lo") return "loopback";
+    if (/^(wl|wlp|wlan|wifi)/i.test(n)) return "wifi";
+    if (/^(en|eth|eno|ens|enp|em)/i.test(n)) return "ethernet";
+    return "other";
+  };
+
   useEffect(() => {
     let mounted = true;
     const fetchMetrics = () => {
