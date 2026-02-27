@@ -84,7 +84,7 @@ npm start
 
 ---
 
-## 6. Backend API Reference
+## Backend API Reference
 Base URLs:
 - Direct: http://localhost:8000
 - Via frontend proxy: /api/...
