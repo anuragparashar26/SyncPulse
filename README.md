@@ -1,32 +1,10 @@
-# ProjectX Monitoring – Technical Documentation
+# SyncPulse - System Monitoring Dashboard
 
-> Purpose: Real‑time visibility into system health (CPU, memory, disks, network, sensors, processes), GPUs, and core service reachability across hosts.
-
----
-
-## Table of Contents
-1. Introduction  
-2. Architecture Overview  
-3. Directory Structure  
-4. Quick Start  
-5. Configuration  
-6. Backend API Reference  
-7. Frontend Guide  
-8. Agent Guide  
-9. Operations & Maintenance  
-10. Security Considerations  
-11. Troubleshooting  
-12. Roadmap
+SyncPulse is a real-time monitoring and analytics platform that provides dashboards for system metrics, alerts, and time-series data, helping users track performance and receive actionable insights across hosts.
 
 ---
 
-## 1. Introduction
-- Scope: Single backend, multiple agents; frontend uses a proxy to consume APIs.
-- Non‑goals: Long‑term storage/analytics (in‑memory), multi‑tenant auth.
-
----
-
-## 2. Architecture Overview
+## Architecture Overview
 - Data flow:
   - Agent → POST /metrics (1–5s typical)
   - Backend keeps last 100 snapshots per agent (in‑memory)
@@ -37,7 +15,7 @@
 
 ---
 
-## 3. Directory Structure
+## Directory Structure
 ```bash
 ProjectX/
 ├─ agent/                         # Local metrics collector (imported by backend)
@@ -46,32 +24,45 @@ ProjectX/
 ├─ backend/                       # FastAPI backend
 │  └─ main.py
 │
-├─ frontend/                      # React + MUI frontend
-│  ├─ public/
-│  ├─ src/
-│  │  ├─ components/
-│  │  └─ pages/
-│  │     ├─ Alerts.js
-│  │     ├─ Dashboard.js
-│  │     └─ Metrics.js
-│  │  ├─ App.js
-│  │  ├─ index.js
-│  │  └─ setupProxy.js            # Dev proxy for /api → backend
-│  └─ package.json
-│
-└─ readme.md                      # This document
+├── frontend                      # React Frontend
+│   ├── index.js
+│   ├── public
+│   │   └── index.html
+│   └── src
+│       ├── App.js
+│       ├── components
+│       │   ├── StatCard.js
+│       │   └── TimeSeriesChart.js
+│       ├── index.js
+│       ├── pages
+│       │   ├── Alerts.js
+│       │   ├── Dashboard.js
+│       │   └── Metrics.js
+│       └── setupProxy.js
+├── README.md
+└── requirements.txt
 ```
 
 ---
 
-## 4. Quick Start
+## Quick Start
+
+### Install Requirements
+```bash
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+```
 
 ### Backend
 ```bash
 cd backend
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+### Agent
+```bash
+cd agent
+python agent.py --server http://<BACKEND_HOST>:8000
 ```
 
 ### Frontend
@@ -81,20 +72,11 @@ npm install
 # Ensure dev proxy routes /api to backend (see src/setupProxy.js)
 npm start
 ```
-
-### Agent
-```bash
-cd agent
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt  # if present
-python agent.py --server http://<BACKEND_HOST>:8000
-```
-
 > Note: Replace <BACKEND_HOST> with the backend address (localhost/LAN IP).
 
 ---
 
-## 5. Configuration
+## Configuration
 - Reverse proxy: map /api → http://localhost:8000 (dev proxy or web server)
 - CORS: open for dev, restrict allow_origins in production
 - Intervals: Agent 1–5s; Frontend: metrics 1s, history/services 5–10s
@@ -299,7 +281,7 @@ Query:
 
 ---
 
-## 7. Frontend Guide
+## Frontend Guide
 - React 18, MUI, Chart.js
 - Pages:
   - Dashboard: Health summary, device selector, server overview
@@ -308,20 +290,20 @@ Query:
 
 ---
 
-## 8. Agent Guide
+## Agent Guide
 - Sends CPU, memory, network, disks, processes, sensors, GPUs, timestamp
 - Recommended: Retry/backoff when backend unreachable
 
 ---
 
-## 9. Operations & Maintenance
+## Operations & Maintenance
 - Polling cadence: metrics 1s, history 5s, services 10s
 - Buffering: last 100 snapshots per agent in memory
 - Scale via reverse proxy; add persistence for longer history
 
 ---
 
-## 10. Security Considerations
+## Security Considerations
 - Restrict CORS in production
 - Reverse proxy the backend
 - Protect /services if exposed publicly (reveals reachability)
@@ -329,17 +311,9 @@ Query:
 
 ---
 
-## 11. Troubleshooting
+## Troubleshooting
 - Frontend can’t reach backend: verify /api proxy (setupProxy.js or reverse proxy)
 - No metrics: ensure agent URL and agent_id are correct
 - No GPU: check host capabilities and agent GPU calls
 
 ---
-
-## 12. Roadmap
-- Optional persistence for history
-- AuthN/AuthZ for APIs/UI
-- Per‑agent staleness and richer charts
-- Extend /services (TLS, DNS/NTP, cert expiry)
-
-End of document.
